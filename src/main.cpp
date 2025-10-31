@@ -70,13 +70,13 @@ TipProfile active_tip = ACTIVE_TIP;
 int pot_value = 0; 
 
 float Setpoint = 300, Input = 0, Output = 0;
-#define GAP_FOR_CONSERVATIVE_TUNINGS 25
+#define GAP_FOR_CONSERVATIVE_TUNINGS 50
 struct Tunings {
   float Kp; 
   float Ki; 
   float Kd;
 }; 
-Tunings aggressive = {10.0, 5.0, 2.0}; 
+Tunings aggressive = {10.0, 5.0, 4.0}; 
 Tunings conservative = {1.0, 0.05, 0.25}; 
 
 
