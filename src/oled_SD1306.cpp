@@ -11,10 +11,21 @@
 }
 
 
+void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const unsigned int lastSetpointChangeTime){
+  if(abs((int) msNow  - (int)lastSetpointChangeTime) < 2000) {
+    show_set_temperature(display, Setpoint);
+    return;
+  }
+  if( msNow - windowStartTime <= (windowSize >> 1) ) {
+    return;
+  }
+  show_actual_temperature(display, Input);
+  return;
+}
 
 
 
-void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const TipProfile &activeTip){
+void update_debug_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const TipProfile &activeTip){
   if( msNow - windowStartTime >= (windowSize >> 1) ) {
     int input = (int) round(Input);
     int output = (int) round(Output * 100 / max_output);
@@ -54,15 +65,45 @@ void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const 
 
     display.setTextSize(1.5);
     display.setCursor(SCREEN_WIDTH - w1, 68-12);
-    //display.print("(");
     display.print(activeTip.name);
-    // display.print(", ");
-    // display.print((int)activeTip.resistance);
-    // //display.write((unsigned char)234);
-    // display.print(" Ohms)");
     display.display();
   }
 }
 
 
 
+void show_temperature(Adafruit_SSD1306 &display, const bool is_actual, const float temperature){
+  display.clearDisplay();
+  display.setTextColor(WHITE); 
+  display.setTextSize(1.9);
+  display.setCursor(0,0); 
+  if(is_actual)
+    display.print("  Now "); 
+  else
+    display.print("  Set "); 
+  // display.print((char)247); 
+  // display.println("C:");
+
+  display.setTextSize(5);      
+  display.setCursor(10,15);
+  int temperature_int = (int) round(temperature);
+  if(temperature_int < 10) {
+    display.print("  ");
+  } else if(temperature_int < 100) {
+    display.print(" ");
+  } 
+  display.print(temperature_int); 
+  display.setTextSize(2);      
+  display.print((char)247); 
+  display.print("C");
+  display.display();
+}
+
+void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint){
+    show_temperature(display, false, Setpoint);
+}
+
+void show_actual_temperature(Adafruit_SSD1306 &display, const float Input){
+    show_temperature(display, true, Input);
+} 
+  

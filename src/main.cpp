@@ -89,6 +89,11 @@ const byte debounce = 20;
 unsigned long windowStartTime = 0, nextSwitchTime = 0, msNow = 0;
 boolean relayStatus = false;
 
+float old_set_point = 200.0;
+unsigned long lastSetpointChangeTime = 0;
+boolean set_point_changed = false;
+
+
 QuickPID myPID(&Input, &Output, &Setpoint, aggressive.Kp, aggressive.Ki, aggressive.Kd,
                myPID.pMode::pOnError,
                myPID.dMode::dOnMeas,
@@ -110,13 +115,6 @@ void setup() {
   #ifdef ENABLE_OLED_DISPLAY
     setup_OLED_display(display, SDA_PIN, SCL_PIN);
   #endif
-    // Wire.begin(SDA_PIN, SCL_PIN);
-    // if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
-    //   Serial.println(F("SSD1306 allocation failed"));
-    //   for(;;); // Don't proceed, loop forever
-    // }
-    // display.clearDisplay();
-    // //delay(1000); 
   #ifdef TC_MAX31855
     vspi.begin(THERMOCOUPLE_CLOCK, THERMOCOUPLE_DATA, THERMOCOUPLE_CHIP_SELECT);
     thermocouple.begin(); 
@@ -162,7 +160,8 @@ void loop() {
     PIDCompute();
     
     #ifdef ENABLE_OLED_DISPLAY
-     update_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, active_tip);
+     //update_debug_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, active_tip);
+      update_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, lastSetpointChangeTime);
     #endif 
   }
 }
@@ -187,12 +186,20 @@ void readInput(){
 
 void readSetPoint() {
   pot_value = 0; 
-  for(int i = 0; i<8; i++){
+  for(int i = 0; i<16; i++){
     pot_value += analogRead(TEMPERATURE_SET_PIN);
   }
-  pot_value = (pot_value >> 3); 
+  pot_value = (pot_value >> 4); 
 
   Setpoint = MIN_TEMP_CELSIUS + (MAX_TEMP_CELSIUS - MIN_TEMP_CELSIUS) *  ((float)pot_value) / 4095;
+  if (abs(Setpoint - old_set_point) >= 2.5) {
+    set_point_changed = true;
+    old_set_point = Setpoint;
+    lastSetpointChangeTime = millis();
+  } else {
+    set_point_changed = false;
+  }
+
   #ifdef ENABLE_SERIAL
     Serial.print("Pot value is "); 
     Serial.println(pot_value); 

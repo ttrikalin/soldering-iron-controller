@@ -18,6 +18,11 @@
 
 
 void setup_OLED_display(Adafruit_SSD1306 &display, const int sda, const int scl);
-void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const TipProfile &activeTip);
+void update_debug_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const TipProfile &activeTip);
+void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const unsigned int lastSetpointChangeTime);
+void show_temperature(Adafruit_SSD1306 &display, const bool is_actual, const float temperature);
+void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint);
+void show_actual_temperature(Adafruit_SSD1306 &display, const float Input);
+
 
 #endif
