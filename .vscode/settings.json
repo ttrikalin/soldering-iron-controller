@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.R": "r",
+    "cmath": "cpp",
+    "typeinfo": "cpp"
+  }
+}
