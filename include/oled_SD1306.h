@@ -23,6 +23,6 @@ void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const 
 void show_temperature(Adafruit_SSD1306 &display, const bool is_actual, const float temperature);
 void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint);
 void show_actual_temperature(Adafruit_SSD1306 &display, const float Input);
-
+void show_power_bar(Adafruit_SSD1306 &display, const float Input, const float max_input);
 
 #endif

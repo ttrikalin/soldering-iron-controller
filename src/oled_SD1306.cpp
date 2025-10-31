@@ -14,12 +14,16 @@
 void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const unsigned int lastSetpointChangeTime){
   if(abs((int) msNow  - (int)lastSetpointChangeTime) < 2000) {
     show_set_temperature(display, Setpoint);
+    show_power_bar(display, Output, max_output);
+    display.display();
     return;
   }
   if( msNow - windowStartTime <= (windowSize >> 1) ) {
     return;
   }
   show_actual_temperature(display, Input);
+  show_power_bar(display, Output, max_output);
+  display.display();
   return;
 }
 
@@ -96,7 +100,7 @@ void show_temperature(Adafruit_SSD1306 &display, const bool is_actual, const flo
   display.setTextSize(2);      
   display.print((char)247); 
   display.print("C");
-  display.display();
+  //display.display();
 }
 
 void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint){
@@ -106,4 +110,11 @@ void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint){
 void show_actual_temperature(Adafruit_SSD1306 &display, const float Input){
     show_temperature(display, true, Input);
 } 
-  
+
+void show_power_bar(Adafruit_SSD1306 &display, const float Input, const float max_input){
+  int bar_width = (int) round((Input / max_input) * (SCREEN_WIDTH - 10));
+
+  display.drawRect(2, (int) SCREEN_HEIGHT - 10, SCREEN_WIDTH - 5, 8, WHITE);
+  display.fillRect(5, (int) SCREEN_HEIGHT - 8, bar_width, 4, WHITE);
+  //display.display();
+}
