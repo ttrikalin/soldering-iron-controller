@@ -16,9 +16,12 @@
   • Only one call to digitalWrite() per transition
   *****************************************************************************/
 
+
 // comment the following to disable Serial monitor 
 #define ENABLE_SERIAL
 #define ENABLE_OLED_DISPLAY
+
+
 
 
 #include <Arduino.h>
@@ -66,6 +69,12 @@
 #endif
 
 TipProfile active_tip = ACTIVE_TIP;
+
+
+
+#include "aoyoue906.h"
+
+
 
 int pot_value = 0; 
 
