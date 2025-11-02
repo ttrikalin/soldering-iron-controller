@@ -43,9 +43,9 @@
 #define THERMOCOUPLE_DATA        19
 #define THERMOCOUPLE_CLOCK       18
 #define THERMOCOUPLE_CHIP_SELECT  5
-#define ERROR_LED                35
+#define ERROR_LED                33
 
-#define TEMPERATURE_SET_PIN      34
+#define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer
 #define IRON_RELAY               2
 
 #ifdef TC_MAX31855
@@ -103,6 +103,8 @@ QuickPID myPID(&Input, &Output, &Setpoint, aggressive.Kp, aggressive.Ki, aggress
 
 void readSetPoint();
 void readInput();
+void displayTCError();
+void displayNoWandError();
 void PIDCompute();
 
 void setup() {
@@ -126,7 +128,7 @@ void setup() {
   myPID.SetOutputLimits(0, max_output);
   myPID.SetSampleTimeUs(windowSize * 1000);
   myPID.SetMode(myPID.Control::automatic);
-
+  digitalWrite(ERROR_LED, LOW); 
 }
 
 
@@ -138,13 +140,17 @@ void loop() {
   readInput(); 
 
   if(isnan(Input)) {
+    relayStatus = false;
+    digitalWrite(IRON_RELAY, LOW);
     #ifdef ENABLE_SERIAL
-      Serial.print("Failed to read temperature sensor! "); 
+      Serial.print("Failed to read temperature sensor! ");
       #ifdef TC_MAX31855
         Serial.println(thermocouple.readError());
       #endif
     #endif
-    digitalWrite(ERROR_LED, HIGH); 
+    digitalWrite(ERROR_LED, HIGH);
+    displayNoWandError();
+    displayTCError();
   } else {
     digitalWrite(ERROR_LED, LOW); 
     #ifdef ENABLE_SERIAL
@@ -186,13 +192,13 @@ void readInput(){
 
 void readSetPoint() {
   pot_value = 0; 
-  for(int i = 0; i<16; i++){
+  for(int i = 0; i<8; i++){
     pot_value += analogRead(TEMPERATURE_SET_PIN);
   }
-  pot_value = (pot_value >> 4); 
+  pot_value = (pot_value >> 3); 
 
   Setpoint = MIN_TEMP_CELSIUS + (MAX_TEMP_CELSIUS - MIN_TEMP_CELSIUS) *  ((float)pot_value) / 4095;
-  if (abs(Setpoint - old_set_point) >= 2.5) {
+  if (abs(Setpoint - old_set_point) >= 5) {
     set_point_changed = true;
     old_set_point = Setpoint;
     lastSetpointChangeTime = millis();
@@ -234,3 +240,72 @@ void PIDCompute(){
   }
 }
 
+void displayNoWandError(){
+  #ifdef ENABLE_OLED_DISPLAY
+    display.clearDisplay();
+    display.setTextSize(3);      // Normal 1:1 pixel scale
+    display.setTextColor(WHITE); // Draw white text
+    display.setCursor(0,20);     
+    display.println("No Wand");
+    display.display();
+    delay(2000);
+    
+    display.clearDisplay();
+    display.setTextSize(3);      // Normal 1:1 pixel scale
+    display.setTextColor(WHITE); // Draw white text
+    display.setCursor(0,8);   
+    display.println(" Power");
+    display.println("  OFF");
+    display.display();
+    delay(2000);
+
+    display.clearDisplay();
+    display.setTextSize(2);      // Normal 1:1 pixel scale
+    display.setTextColor(WHITE); // Draw white text
+    display.setCursor(0,0);     // Start at top-left corner
+    display.println("No Wand?");
+    display.setCursor(0,16);     // Start at second line
+    display.setTextSize(1);
+    display.println("\nCheck for");
+    display.println("1 Unplugged wand");
+    display.println("2 Faulty connection");
+    display.println("3 Broken thermocouple");
+    display.display();
+    delay(2000);
+  #endif
+}
+
+
+void displayTCError(){
+  #ifdef ENABLE_OLED_DISPLAY
+    display.clearDisplay();
+    display.setTextSize(2);      // Normal 1:1 pixel scale
+    display.setTextColor(WHITE); // Draw white text
+    display.setCursor(0,0);     // Start at top-left corner
+    display.println("TC Error?");
+    display.setCursor(0,16);     // Start at second line
+    display.setTextSize(1);
+    display.println("\nCheck for");
+    display.println("1 Unconnected wand");
+    display.println("2 Thermocouple fault");
+    #ifdef TC_MAX31855
+      uint8_t fault = thermocouple.readError();
+      if (fault & MAX31855_FAULT_OPEN) {
+        display.println("- Open circuit");
+      } else if (fault & MAX31855_FAULT_SHORT_GND) {
+        display.println("- Short to GND");
+      } else if (fault & MAX31855_FAULT_SHORT_VCC) {
+        display.println("- Short to VCC");
+      } else {
+        display.println("- Unknown MAX31855 error");
+      }
+      
+    #endif
+    #ifdef TC_MAX6675
+      display.println("- Thermocouple open?");  
+      display.println("- MAX6675 error?");
+    #endif
+    display.display();
+    delay(2000);
+  #endif
+}

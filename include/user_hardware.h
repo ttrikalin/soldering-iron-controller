@@ -15,7 +15,7 @@
 #define MAX_TEMP_CELSIUS  480
 #define PID_WINDOW_SIZE_MS 1000
 
-#define ACTIVE_TIP t12_7 //aoyue_906 //t12_7
+#define ACTIVE_TIP t12_7G //aoyue_906 //t12_7
 
 
 
