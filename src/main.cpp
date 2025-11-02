@@ -77,7 +77,7 @@ struct Tunings {
   float Kd;
 }; 
 Tunings aggressive = {5.0, 2.0, 1.0}; 
-Tunings conservative = {1.0, 0.25, 0.5}; 
+Tunings conservative = {1.0, 0.5, 0.20}; 
 
 
 // user settings -- adjust as needed
@@ -89,7 +89,7 @@ const byte debounce = 20;
 unsigned long windowStartTime = 0, nextSwitchTime = 0, msNow = 0;
 boolean relayStatus = false;
 
-float old_set_point = 200.0;
+float old_set_point = 180.0;
 unsigned long lastSetpointChangeTime = 0;
 boolean set_point_changed = false;
 
@@ -218,6 +218,11 @@ void readSetPoint() {
 
 
 void PIDCompute(){
+  if(Input <= 195) {
+    relayStatus = false;
+    digitalWrite(IRON_RELAY, LOW);
+  }
+
   float gap = abs(Setpoint - Input); //distance away from setpoint
   if (gap < GAP_FOR_CONSERVATIVE_TUNINGS) { 
     myPID.SetTunings(conservative.Kp, conservative.Ki, conservative.Kd);

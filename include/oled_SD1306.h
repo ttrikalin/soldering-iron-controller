@@ -24,5 +24,5 @@ void show_temperature(Adafruit_SSD1306 &display, const bool is_actual, const flo
 void show_set_temperature(Adafruit_SSD1306 &display, const float Setpoint);
 void show_actual_temperature(Adafruit_SSD1306 &display, const float Input);
 void show_power_bar(Adafruit_SSD1306 &display, const float Input, const float max_input);
-
+void show_off_status(Adafruit_SSD1306 &display);
 #endif

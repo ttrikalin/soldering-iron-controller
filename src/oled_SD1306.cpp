@@ -18,7 +18,12 @@ void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const 
     display.display();
     return;
   }
-  if( msNow - windowStartTime <= (windowSize >> 1) ) {
+  if( msNow - windowStartTime <= (windowSize) ) {
+    return;
+  }
+  if (Input <195) { 
+    show_off_status(display);
+    display.display();
     return;
   }
   show_actual_temperature(display, Input);
@@ -27,7 +32,13 @@ void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const 
   return;
 }
 
-
+void show_off_status(Adafruit_SSD1306 &display){
+  display.clearDisplay();
+  display.setTextSize(5);      
+  display.setCursor(10,15);
+  display.println("OFF");
+  return;
+}
 
 void update_debug_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const float Input, const float Output, const float max_output, const unsigned long msNow, const unsigned long windowStartTime, const unsigned long windowSize, const TipProfile &activeTip){
   if( msNow - windowStartTime >= (windowSize >> 1) ) {
