@@ -18,10 +18,10 @@ void update_OLED_display(Adafruit_SSD1306 &display, const float Setpoint, const 
     display.display();
     return;
   }
-  if( msNow - windowStartTime <= (windowSize) ) {
+  if( msNow - windowStartTime <= (windowSize>>1) ) {
     return;
   }
-  if (Input <195) { 
+  if (Input <-195) { 
     show_off_status(display);
     display.display();
     return;

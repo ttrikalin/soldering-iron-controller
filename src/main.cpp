@@ -176,7 +176,7 @@ void loop() {
 void readInput(){
   delay(THERMOCOUPLE_DELAY_MS-debounce);
   digitalWrite(IRON_RELAY, LOW);
-  delay(debounce);
+  delay(debounce << 2);
   Input = thermocouple.readCelsius();
   #ifdef TC_MAX31855
     Input = convert_temperature_reading(active_tip, thermocouple.readCelsius(), thermocouple.readInternal());
@@ -218,7 +218,7 @@ void readSetPoint() {
 
 
 void PIDCompute(){
-  if(Input <= 195) {
+  if(Input <= -195) {
     relayStatus = false;
     digitalWrite(IRON_RELAY, LOW);
   }
