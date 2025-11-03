@@ -17,62 +17,33 @@
   *****************************************************************************/
 
 
-// comment the following to disable Serial monitor 
-#define ENABLE_SERIAL
-#define ENABLE_OLED_DISPLAY
-
-
-
 
 #include <Arduino.h>
-#include "user_hardware.h"
-#ifdef TC_MAX31855
-  #include <Adafruit_MAX31855.h>
-  #include <SPI.h>
-  #define THERMOCOUPLE_DELAY_MS 100
-#endif
-#ifdef TC_MAX6675
-  #include <MAX6675.h>
-  #define THERMOCOUPLE_DELAY_MS 250
-#endif
-#include <QuickPID.h>
-#include "thermocouple_conversions.h"
+#include "aoyue906.h"
 #include "tip_profiles.h"
-#ifdef ENABLE_OLED_DISPLAY
-  #include "oled_SD1306.h"
-#endif
-
-// Thermocouple 
-#define THERMOCOUPLE_DATA        19
-#define THERMOCOUPLE_CLOCK       18
-#define THERMOCOUPLE_CHIP_SELECT  5
-#define ERROR_LED                33
-
-#define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer
-#define IRON_RELAY               2
 
 #ifdef TC_MAX31855
   SPIClass vspi(VSPI);
-  //Adafruit_MAX31855 thermocouple(THERMOCOUPLE_CLOCK, THERMOCOUPLE_CHIP_SELECT, THERMOCOUPLE_DATA);
   Adafruit_MAX31855 thermocouple(THERMOCOUPLE_CHIP_SELECT, &vspi);
 #endif
 #ifdef TC_MAX6675
   MAX6675 thermocouple(THERMOCOUPLE_CLOCK, THERMOCOUPLE_CHIP_SELECT, THERMOCOUPLE_DATA);
 #endif
-
-
-#ifdef ENABLE_OLED_DISPLAY
-  // display OLED pins for ESP32
-  #define SDA_PIN 21 // default SDA pin for ESP32
-  #define SCL_PIN 22 // default SCL pin for ESP32
-  Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-#endif
-
-TipProfile active_tip = ACTIVE_TIP;
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 
 
-#include "aoyoue906.h"
+potentiometerMonitorData pot_monitor; 
+thermocoupleMonitorData tc_monitor;
+
+
+void setup(void){
+  //ESP32_WROOM32_initialize();
+  potentiometer_monitor_initialize();
+  thermocouple_monitor_initialize();
+  display_monitor_initialize();
+}
+
 
 
 
@@ -174,10 +145,9 @@ void loop() {
     
     PIDCompute();
     
-    #ifdef ENABLE_OLED_DISPLAY
-     //update_debug_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, active_tip);
-      update_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, lastSetpointChangeTime);
-    #endif 
+    
+    update_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, lastSetpointChangeTime);
+    
   }
 }
 
@@ -255,7 +225,6 @@ void PIDCompute(){
 }
 
 void displayNoWandError(){
-  #ifdef ENABLE_OLED_DISPLAY
     display.clearDisplay();
     display.setTextSize(3);      // Normal 1:1 pixel scale
     display.setTextColor(WHITE); // Draw white text
@@ -286,12 +255,12 @@ void displayNoWandError(){
     display.println("3 Broken thermocouple");
     display.display();
     delay(2000);
-  #endif
+  
 }
 
 
 void displayTCError(){
-  #ifdef ENABLE_OLED_DISPLAY
+
     display.clearDisplay();
     display.setTextSize(2);      // Normal 1:1 pixel scale
     display.setTextColor(WHITE); // Draw white text
@@ -321,5 +290,4 @@ void displayTCError(){
     #endif
     display.display();
     delay(2000);
-  #endif
 }
