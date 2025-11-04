@@ -35,6 +35,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 potentiometerMonitorData pot_monitor; 
 thermocoupleMonitorData tc_monitor;
+displayMonitorData display_monitor;
 
 
 void setup(void){
@@ -43,6 +44,13 @@ void setup(void){
   thermocouple_monitor_initialize();
   display_monitor_initialize();
 }
+
+
+
+
+
+
+
 
 
 
@@ -94,9 +102,9 @@ void setup() {
   #ifdef ENABLE_SERIAL
     Serial.begin(115200);
   #endif
-  #ifdef ENABLE_OLED_DISPLAY
-    setup_OLED_display(display, SDA_PIN, SCL_PIN);
-  #endif
+  
+  setup_OLED_display(display, SDA_PIN, SCL_PIN);
+  
   #ifdef TC_MAX31855
     vspi.begin(THERMOCOUPLE_CLOCK, THERMOCOUPLE_DATA, THERMOCOUPLE_CHIP_SELECT);
     thermocouple.begin(); 
@@ -291,3 +299,5 @@ void displayTCError(){
     display.display();
     delay(2000);
 }
+
+

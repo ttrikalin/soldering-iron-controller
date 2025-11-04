@@ -115,7 +115,7 @@ typedef struct {
   float current_celsius; 
   float previous_celsius;
   unsigned long last_change_time_ms;
-  bool changed;
+  bool changed_flag;
   unsigned long read_every_ms;
 } potentiometerMonitorData;
 
@@ -131,6 +131,53 @@ void read_potentiometer();
 /* DISPLAY MONITOR                                                     */
 /*****************************************************************************/
 
+typedef enum {
+  DISPLAY_MONITOR_INIT = 0,
+  DISPLAY_MONITOR_WAIT = 1,
+  DISPLAY_MONITOR_POTENTIOMETER_TEMPERATURE = 2,
+  DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE = 3,
+  DISPLAY_MONITOR_OFF_MESSAGE = 4,
+  DISPLAY_MONITOR_POWER_OFF_MESSAGE = 5,
+  DISPLAY_MONITOR_NO_WAND_MESSAGE = 6,
+  DISPLAY_MONITOR_THERMOCOUPLE_ERROR_INFO = 7,
+  DISPLAY_MONITOR_NO_WAND_ERROR_INFO = 8
+} display_monitor_states;
 
+
+
+// typedef struct {
+//   unsigned int splash_background_color;
+//   unsigned int splash_text_color;
+//   unsigned int set_temperature_background_color;
+//   unsigned int set_temperature_text_color;
+//   unsigned int actual_temperature_background_color;
+//   unsigned int actual_temperature_text_color;
+// } color_themes;
+
+typedef struct {
+  //Adafruit_SSD1306 * display;
+  display_monitor_states state;
+  bool heater_off_color_scheme;
+  unsigned int text_color;
+  unsigned int bar_color;
+  unsigned int error_counter;
+
+} displayMonitorData;
+
+
+void display_monitor_initialize(void);
+void display_monitor_tasks(void);
+
+void display_splash_screen_message(void);
+void display_off_message(void);
+void display_power_off_message(void);
+void display_no_wand_message()
+
+void display_thermocouple_error_info(void);
+void display_no_wand_error_info(void);
+
+void show_temperature(bool show_tc_temp);
+void display_potentiometer_temperature(void);
+void display_thermocouple_temperature(void);
 
 #endif
