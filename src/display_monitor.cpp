@@ -1,5 +1,11 @@
 #include "aoyue906.h"
 
+extern displayMonitorData display_monitor;
+extern thermocoupleMonitorData tc_monitor;
+extern potentiometerMonitorData pot_monitor;
+extern heaterControlMonitorData heater_control_monitor;
+extern Adafruit_SSD1306 display;
+
 void display_monitor_initialize(void){
   //display_monitor.display = display; 
   display_monitor.state = DISPLAY_MONITOR_INIT;
@@ -8,7 +14,7 @@ void display_monitor_initialize(void){
   display_monitor.bar_color = WHITE;
   display_monitor.error_counter = 0;
 
-  Wire.begin(sda, scl);
+  Wire.begin(SDA_PIN, SCL_PIN);
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
@@ -17,32 +23,32 @@ void display_monitor_initialize(void){
 }
 
 
-
 void display_monitor_tasks(void){
   switch(display_monitor.state){
     case DISPLAY_MONITOR_INIT:
-      display_splash_screen();
+      display_splash_screen_message();
       display_monitor.state = DISPLAY_MONITOR_WAIT;
       break;
     case DISPLAY_MONITOR_WAIT:
-      if(thermocouple_monitor.error_flag) {
-        switch(display_monitor.error_counter)
-        case 0:
-          display_monitor.state = DISPLAY_MONITOR_NO_WAND_MESSAGE;
-          break; 
-        case 1:
-          display_monitor.state = DISPLAY_MONITOR_POWER_OFF_MESSAGE;
-          break;  
-        case 2:
-          display_monitor.state = DISPLAY_MONITOR_NO_WAND_ERROR_INFO;
-          break;  
-        case 3:
-          display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_ERROR_INFO;
-          break; 
-        default:
-          display_monitor.state = DISPLAY_MONITOR_OFF_MESSAGE;
-          break; 
-      } else if(potentiometer_monitor.changed_flag) {
+      if(tc_monitor.error_flag) {
+        switch(display_monitor.error_counter) {
+          case 0:
+            display_monitor.state = DISPLAY_MONITOR_NO_WAND_MESSAGE;
+            break; 
+          case 1:
+            display_monitor.state = DISPLAY_MONITOR_POWER_OFF_MESSAGE;
+            break;  
+          case 2:
+            display_monitor.state = DISPLAY_MONITOR_NO_WAND_ERROR_INFO;
+            break;  
+          case 3:
+            display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_ERROR_INFO;
+            break; 
+          default:
+            display_monitor.state = DISPLAY_MONITOR_OFF_MESSAGE;
+            break; 
+        }
+      } else if(pot_monitor.changed_flag) {
         display_monitor.state = DISPLAY_MONITOR_POTENTIOMETER_TEMPERATURE;
       } else {
         display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
@@ -84,7 +90,7 @@ void display_monitor_tasks(void){
 void display_splash_screen_message(void){
   //use_colors(splash_background_color, splash_text_color, WHITE);
   display.clearDisplay();
-  display.setTextColor();
+  display.setTextColor(display_monitor.text_color);
   display.setTextSize(2);
   display.setCursor(10, 20);
   display.println(" AOYUE"); 
@@ -205,7 +211,7 @@ void show_temperature(bool show_tc_temp){
 }
 
 void show_power_bar(){
-  int bar_width = (int) round((Input / max_input) * (SCREEN_WIDTH - 10));
+  int bar_width = (int) round((heater_control_monitor.pid_output_ms / heater_control_monitor.pid_max_output_ms) * (SCREEN_WIDTH - 10));
   display.drawRect(2, (int) SCREEN_HEIGHT - 10, SCREEN_WIDTH - 5, 8, display_monitor.bar_color);
   display.fillRect(5, (int) SCREEN_HEIGHT - 8, bar_width, 4, display_monitor.bar_color);
 }

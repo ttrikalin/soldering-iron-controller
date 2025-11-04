@@ -1,26 +1,30 @@
 #ifndef H_AOYUE906 
 #define H_AOYUE906 
 
-
-
 // comment the following to disable Serial monitor 
 #define ENABLE_SERIAL
 
 #include "user_hardware.h"
 
+#include <cmath>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h> 
+#include <QuickPID.h>
 
 #ifdef TC_MAX31855
   #include <Adafruit_MAX31855.h>
-  #include <SPI.h>
   #define THERMOCOUPLE_DELAY_MS 100
 #endif
 #ifdef TC_MAX6675
   #include <MAX6675.h>
   #define THERMOCOUPLE_DELAY_MS 250
 #endif
-#include <QuickPID.h>
-#include "oled_SD1306.h"
 
+/*****************************************************************************/
+/* ESP32 WROOM32 SETUP                                                       */
+/*****************************************************************************/
 
 // Thermocouple 
 #define THERMOCOUPLE_DATA        19
@@ -29,12 +33,17 @@
 #define ERROR_LED                33
 
 #define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer
-#define IRON_RELAY               2
+#define IRON_RELAY                2
 
+#define SDA_PIN                  21
+#define SCL_PIN                  22
 
+#define ZERO_CROSSING_PIN        23  
+
+void MCU_initialize(void);
 
 /*****************************************************************************/
-/* THERMOCOUPLE MONITOR                                                       */
+/* THERMOCOUPLE MONITOR                                                      */
 /*****************************************************************************/
 
 #define TC_GAIN_K 41.276
@@ -59,6 +68,11 @@ typedef struct {
     bool tc_grounded;
 } tipProfile;
 
+const tipProfile t12_7G = {"T12-7G",  7.0, 'K', true};
+const tipProfile t12_9 = {"T12-9",  9.0, 'K', false};
+const tipProfile t12_12 = {"T12-12",  12.0, 'K', false};
+const tipProfile aoyue_906 = {"Aoyue-906", 18.0, 'K', false};
+
 typedef enum {
   THERMOCOUPLE_ERROR_NONE = 0,
   THERMOCOUPLE_ERROR_DISCONNECTED = 1,
@@ -68,16 +82,17 @@ typedef enum {
 
 typedef struct {
   #ifdef TC_MAX6675
-    MAX6675 thermocouple;
+    MAX6675 * thermocouple;
   #endif
   #ifdef TC_MAX31855
-    Adafruit_MAX31855 thermocouple; 
+    Adafruit_MAX31855 * thermocouple; 
   #endif
   thermocouple_monitor_states state;
   float wand_celsius;
   float ambient_celsius; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
+  //bool isr_zero_crossing_flag;
   bool read_flag; 
   bool error_flag;
   thermocouple_error error;
@@ -87,6 +102,8 @@ typedef struct {
 void thermocouple_monitor_initialize(void);
 void thermocouple_monitor_tasks(void);
 void read_thermocouple();
+
+void IRAM_ATTR zero_crossing_ISR(void);
 
 float voltage_from_temperature(float gain, float temperature, float ambient_temperature);
 float temperature_from_voltage(float gain, float voltage, float ambient_temperature);
@@ -124,9 +141,6 @@ void potentiometer_monitor_tasks(void);
 void read_potentiometer();
 
 
-
-
-
 /*****************************************************************************/
 /* DISPLAY MONITOR                                                     */
 /*****************************************************************************/
@@ -144,18 +158,7 @@ typedef enum {
 } display_monitor_states;
 
 
-
-// typedef struct {
-//   unsigned int splash_background_color;
-//   unsigned int splash_text_color;
-//   unsigned int set_temperature_background_color;
-//   unsigned int set_temperature_text_color;
-//   unsigned int actual_temperature_background_color;
-//   unsigned int actual_temperature_text_color;
-// } color_themes;
-
 typedef struct {
-  //Adafruit_SSD1306 * display;
   display_monitor_states state;
   bool heater_off_color_scheme;
   unsigned int text_color;
@@ -171,7 +174,7 @@ void display_monitor_tasks(void);
 void display_splash_screen_message(void);
 void display_off_message(void);
 void display_power_off_message(void);
-void display_no_wand_message()
+void display_no_wand_message();
 
 void display_thermocouple_error_info(void);
 void display_no_wand_error_info(void);
@@ -179,5 +182,50 @@ void display_no_wand_error_info(void);
 void show_temperature(bool show_tc_temp);
 void display_potentiometer_temperature(void);
 void display_thermocouple_temperature(void);
+
+
+
+/*****************************************************************************/
+/* HEATER CONTROL MONITOR                                                    */
+/*****************************************************************************/
+typedef enum{
+  HEATER_CONTROL_MONITOR_INIT = 0, 
+  HEATER_CONTROL_MONITOR_WAIT = 1, 
+  HEATER_CONTROL_MONITOR_COMPUTE = 2
+} heater_control_monitor_states;
+
+
+typedef struct {
+  float Kp; 
+  float Ki; 
+  float Kd;
+} Tunings; 
+
+
+
+typedef struct {
+  heater_control_monitor_states state;
+  Tunings aggressive_tune;
+  Tunings conservative_tune;
+  float gap_to_switch_to_aggressive_tune;
+  byte debounce_time_ms;
+
+  unsigned long pid_output_window_size_ms;
+  unsigned long pid_max_output_ms;
+  unsigned long pid_output_ms;
+  unsigned long pid_window_start_time_ms;
+
+  unsigned long next_relay_switch_time_ms;
+  unsigned long now_ms;
+  
+  bool relay_on; 
+  bool can_compute_flag;
+
+} heaterControlMonitorData;
+
+void heater_control_initialize(void);
+void heater_control_tasks(void);
+void pid_compute(void);
+unsigned long get_pid_max_output(const tipProfile&profile, unsigned long range_max, float supply_power, float supply_voltage);
 
 #endif

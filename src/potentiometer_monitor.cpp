@@ -1,12 +1,14 @@
 #include "aoyue906.h"
 
+extern potentiometerMonitorData pot_monitor;
+
 void potentiometer_monitor_initialize(void) {
   pot_monitor.state = POTENTIOMETER_MONITOR_INIT;
   pot_monitor.value = 0;
   pot_monitor.current_celsius = 0.0;
   pot_monitor.previous_celsius = 0.0;
   pot_monitor.last_change_time_ms = 0;
-  pot_monitor.changed = false;
+  pot_monitor.changed_flag = false;
   pot_monitor.read_every_ms = 500;
 }
 
@@ -18,7 +20,7 @@ void potentiometer_monitor_tasks(void) {
       break;
 
     case POTENTIOMETER_MONITOR_WAIT:
-      if (millis() - pot_monitor.last_read_ms >= pot_monitor.read_every_ms) {
+      if (millis() - pot_monitor.last_change_time_ms >= pot_monitor.read_every_ms) {
         pot_monitor.state = POTENTIOMETER_MONITOR_READ;
       }
       break;
@@ -46,11 +48,11 @@ void read_potentiometer() {
 
   pot_monitor.current_celsius = MIN_TEMP_CELSIUS + (MAX_TEMP_CELSIUS - MIN_TEMP_CELSIUS) *  ((float)pot_monitor.value) / 4095;
   if (abs(pot_monitor.current_celsius - pot_monitor.previous_celsius) >= 5) {
-    pot_monitor.changed = true;
+    pot_monitor.changed_flag = true;
     pot_monitor.previous_celsius = pot_monitor.current_celsius;
     pot_monitor.last_change_time_ms = millis();
   } else {
-    pot_monitor.changed = false;
+    pot_monitor.changed_flag = false;
   }
 
   #ifdef ENABLE_SERIAL

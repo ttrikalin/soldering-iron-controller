@@ -1,26 +1,5 @@
-/****************************************************************************
-  PID Relay Output Example
-  https://github.com/Dlloydev/QuickPID/tree/master/examples/PID_RelayOutput
-
-  Similar to basic example, except the output is a digital pin controlling
-  a mechanical relay, SSR, MOSFET or other device. To interface the PID output
-  to a digital pin, we use "time proportioning control" (software PWM).
-  First we decide on a window size (5000mS for example). We then set the pid
-  to adjust its output between 0 and that window size and finally we set the
-  PID sample time to that same window size.
-
-  The digital output has the following features:
-  • The PID compute rate controls the rate of updating the digital output
-  • All transitions are debounced (rising and falling)
-  • Full control range (0 to windowSize) isn't limited by debounce
-  • Only one call to digitalWrite() per transition
-  *****************************************************************************/
-
-
-
 #include <Arduino.h>
 #include "aoyue906.h"
-#include "tip_profiles.h"
 
 #ifdef TC_MAX31855
   SPIClass vspi(VSPI);
@@ -31,273 +10,31 @@
 #endif
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-
-
 potentiometerMonitorData pot_monitor; 
 thermocoupleMonitorData tc_monitor;
 displayMonitorData display_monitor;
+heaterControlMonitorData heater_control_monitor;
+extern QuickPID myPID; 
 
 
 void setup(void){
-  //ESP32_WROOM32_initialize();
+  MCU_initialize();
   potentiometer_monitor_initialize();
   thermocouple_monitor_initialize();
   display_monitor_initialize();
+  heater_control_initialize();
 }
 
+void loop(void){
+  potentiometer_monitor_tasks();
+  thermocouple_monitor_tasks();
+  display_monitor_tasks();
+  heater_control_tasks();
 
-
-
-
-
-
-
-
-
-
-int pot_value = 0; 
-
-float Setpoint = 300, Input = 0, Output = 0;
-#define GAP_FOR_CONSERVATIVE_TUNINGS 50
-struct Tunings {
-  float Kp; 
-  float Ki; 
-  float Kd;
-}; 
-Tunings aggressive = {5.0, 2.0, 1.0}; 
-Tunings conservative = {1.0, 0.5, 0.20}; 
-
-
-// user settings -- adjust as needed
-const unsigned long windowSize = PID_WINDOW_SIZE_MS;
-const unsigned long max_output = get_pid_max_output(active_tip, windowSize, SUPPLY_POWER_WATTS, SUPPLY_VOLTAGE_VOLTS); // for Aoyue 906 tip
-const byte debounce = 20;
-
-// status
-unsigned long windowStartTime = 0, nextSwitchTime = 0, msNow = 0;
-boolean relayStatus = false;
-
-float old_set_point = 180.0;
-unsigned long lastSetpointChangeTime = 0;
-boolean set_point_changed = false;
-
-
-QuickPID myPID(&Input, &Output, &Setpoint, aggressive.Kp, aggressive.Ki, aggressive.Kd,
-               myPID.pMode::pOnError,
-               myPID.dMode::dOnMeas,
-               myPID.iAwMode::iAwClamp,
-               myPID.Action::direct);
-
-
-void readSetPoint();
-void readInput();
-void displayTCError();
-void displayNoWandError();
-void PIDCompute();
-
-void setup() {
-  pinMode(IRON_RELAY, OUTPUT);
-  pinMode(ERROR_LED, OUTPUT);
-  digitalWrite(ERROR_LED, HIGH); 
-  #ifdef ENABLE_SERIAL
-    Serial.begin(115200);
-  #endif
-  
-  setup_OLED_display(display, SDA_PIN, SCL_PIN);
-  
-  #ifdef TC_MAX31855
-    vspi.begin(THERMOCOUPLE_CLOCK, THERMOCOUPLE_DATA, THERMOCOUPLE_CHIP_SELECT);
-    thermocouple.begin(); 
-    thermocouple.setFaultChecks(MAX31855_FAULT_ALL);
-  #endif
-  #ifdef TC_MAX6675
-    // no setup required for MAX6675
-  #endif
-  myPID.SetOutputLimits(0, max_output);
-  myPID.SetSampleTimeUs(windowSize * 1000);
-  myPID.SetMode(myPID.Control::automatic);
-  digitalWrite(ERROR_LED, LOW); 
+  // MCU Tasks
+  digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
+  digitalWrite(ERROR_LED, tc_monitor.error_flag ? HIGH : LOW);
 }
 
-
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  
-  msNow = millis();
-  readInput(); 
-
-  if(isnan(Input)) {
-    relayStatus = false;
-    digitalWrite(IRON_RELAY, LOW);
-    #ifdef ENABLE_SERIAL
-      Serial.print("Failed to read temperature sensor! ");
-      #ifdef TC_MAX31855
-        Serial.println(thermocouple.readError());
-      #endif
-    #endif
-    digitalWrite(ERROR_LED, HIGH);
-    displayNoWandError();
-    displayTCError();
-  } else {
-    digitalWrite(ERROR_LED, LOW); 
-    #ifdef ENABLE_SERIAL
-      Serial.print("Temperature is: "); 
-      Serial.print(Input); 
-      Serial.println(" oC"); 
-      Serial.print("Output: ");
-      Serial.println(Output);
-    #endif
-
-    readSetPoint(); 
-    
-    PIDCompute();
-    
-    
-    update_OLED_display(display, Setpoint, Input, Output, max_output, msNow, windowStartTime, windowSize, lastSetpointChangeTime);
-    
-  }
-}
-
-
-void readInput(){
-  delay(THERMOCOUPLE_DELAY_MS-debounce);
-  digitalWrite(IRON_RELAY, LOW);
-  delay(debounce << 2);
-  Input = thermocouple.readCelsius();
-  #ifdef TC_MAX31855
-    Input = convert_temperature_reading(active_tip, thermocouple.readCelsius(), thermocouple.readInternal());
-  #endif
-  #ifdef TC_MAX6675
-    Input = convert_temperature_reading(active_tip, thermocouple.readCelsius(), 25.0);
-  #endif
-  if (relayStatus) {
-    digitalWrite(IRON_RELAY, HIGH);
-  }
-}
-
-
-void readSetPoint() {
-  pot_value = 0; 
-  for(int i = 0; i<8; i++){
-    pot_value += analogRead(TEMPERATURE_SET_PIN);
-  }
-  pot_value = (pot_value >> 3); 
-
-  Setpoint = MIN_TEMP_CELSIUS + (MAX_TEMP_CELSIUS - MIN_TEMP_CELSIUS) *  ((float)pot_value) / 4095;
-  if (abs(Setpoint - old_set_point) >= 5) {
-    set_point_changed = true;
-    old_set_point = Setpoint;
-    lastSetpointChangeTime = millis();
-  } else {
-    set_point_changed = false;
-  }
-
-  #ifdef ENABLE_SERIAL
-    Serial.print("Pot value is "); 
-    Serial.println(pot_value); 
-
-    Serial.print("Temperature set: "); 
-    Serial.print(Setpoint); 
-    Serial.println(" oC"); 
-  #endif
-}
-
-
-void PIDCompute(){
-  if(Input <= -195) {
-    relayStatus = false;
-    digitalWrite(IRON_RELAY, LOW);
-  }
-
-  float gap = abs(Setpoint - Input); //distance away from setpoint
-  if (gap < GAP_FOR_CONSERVATIVE_TUNINGS) { 
-    myPID.SetTunings(conservative.Kp, conservative.Ki, conservative.Kd);
-  } else {
-    myPID.SetTunings(aggressive.Kp, aggressive.Ki, aggressive.Kd);
-  }    
-  if (myPID.Compute()) windowStartTime = msNow;
-  if (!relayStatus && Output > (msNow - windowStartTime)) {
-    if (msNow > nextSwitchTime) {
-      nextSwitchTime = msNow + debounce;
-      relayStatus = true;
-      digitalWrite(IRON_RELAY, HIGH);
-    }
-  } else if (relayStatus && Output < (msNow - windowStartTime)) {
-    if (msNow > nextSwitchTime) {
-      nextSwitchTime = msNow + debounce;
-      relayStatus = false;
-      digitalWrite(IRON_RELAY, LOW);
-    }
-  }
-}
-
-void displayNoWandError(){
-    display.clearDisplay();
-    display.setTextSize(3);      // Normal 1:1 pixel scale
-    display.setTextColor(WHITE); // Draw white text
-    display.setCursor(0,20);     
-    display.println("No Wand");
-    display.display();
-    delay(2000);
-    
-    display.clearDisplay();
-    display.setTextSize(3);      // Normal 1:1 pixel scale
-    display.setTextColor(WHITE); // Draw white text
-    display.setCursor(0,8);   
-    display.println(" Power");
-    display.println("  OFF");
-    display.display();
-    delay(2000);
-
-    display.clearDisplay();
-    display.setTextSize(2);      // Normal 1:1 pixel scale
-    display.setTextColor(WHITE); // Draw white text
-    display.setCursor(0,0);     // Start at top-left corner
-    display.println("No Wand?");
-    display.setCursor(0,16);     // Start at second line
-    display.setTextSize(1);
-    display.println("\nCheck for");
-    display.println("1 Unplugged wand");
-    display.println("2 Faulty connection");
-    display.println("3 Broken thermocouple");
-    display.display();
-    delay(2000);
-  
-}
-
-
-void displayTCError(){
-
-    display.clearDisplay();
-    display.setTextSize(2);      // Normal 1:1 pixel scale
-    display.setTextColor(WHITE); // Draw white text
-    display.setCursor(0,0);     // Start at top-left corner
-    display.println("TC Error?");
-    display.setCursor(0,16);     // Start at second line
-    display.setTextSize(1);
-    display.println("\nCheck for");
-    display.println("1 Unconnected wand");
-    display.println("2 Thermocouple fault");
-    #ifdef TC_MAX31855
-      uint8_t fault = thermocouple.readError();
-      if (fault & MAX31855_FAULT_OPEN) {
-        display.println("- Open circuit");
-      } else if (fault & MAX31855_FAULT_SHORT_GND) {
-        display.println("- Short to GND");
-      } else if (fault & MAX31855_FAULT_SHORT_VCC) {
-        display.println("- Short to VCC");
-      } else {
-        display.println("- Unknown MAX31855 error");
-      }
-      
-    #endif
-    #ifdef TC_MAX6675
-      display.println("- Thermocouple open?");  
-      display.println("- MAX6675 error?");
-    #endif
-    display.display();
-    delay(2000);
-}
 
 

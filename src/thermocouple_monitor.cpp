@@ -1,50 +1,87 @@
 #include "aoyue906.h"
 
+extern thermocoupleMonitorData tc_monitor;
+extern heaterControlMonitorData heater_control_monitor;
+//const tipProfile ACTIVE_TIP = {"T12-7G",  7.0, 'K', true};
+
 void thermocouple_monitor_initialize(void) {
-  thermocouple_monitor.state = THERMOCOUPLE_MONITOR_INIT;
-  thermocouple_monitor.wand_celsius = 0.0;
-  thermocouple_monitor.ambient_celsius = 0.0;
-  thermocouple_monitor.last_read_ms = 0;
-  thermocouple_monitor.read_every_ms = 500;
-  thermocouple_monitor.read_flag = false;
-  thermocouple_monitor.error_flag = false;
-  thermocouple_monitor.error = THERMOCOUPLE_ERROR_NONE;
-  thermocouple_monitor.tip = t12_7G;
+  tc_monitor.state = THERMOCOUPLE_MONITOR_INIT;
+  tc_monitor.wand_celsius = 0.0;
+  tc_monitor.ambient_celsius = 0.0;
+  tc_monitor.last_read_ms = 0;
+  tc_monitor.read_every_ms = 500;
+  tc_monitor.read_flag = false;
+  //tc_monitor.isr_zero_crossing_flag = false;
+  tc_monitor.error_flag = false;
+  tc_monitor.error = THERMOCOUPLE_ERROR_NONE;
+  tc_monitor.tip.name = ACTIVE_TIP.name;
+  tc_monitor.tip.resistance = ACTIVE_TIP.resistance;
+  tc_monitor.tip.tc_type = ACTIVE_TIP.tc_type;
+  tc_monitor.tip.tc_grounded = ACTIVE_TIP.tc_grounded;
 }
 
 void thermocouple_monitor_tasks(void) {
-  switch (thermocouple_monitor.state) {
+  switch (tc_monitor.state) {
     case THERMOCOUPLE_MONITOR_INIT:
-      thermocouple_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
+      tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
       break;
 
     case THERMOCOUPLE_MONITOR_WAIT:
-      if (millis() - thermocouple_monitor.last_read_ms >= thermocouple_monitor.read_every_ms) {
-        thermocouple_monitor.state = THERMOCOUPLE_MONITOR_READ;
+      // if there is a zero crossing the ISR will set the state to THERMOCOUPLE_MONITOR_READ
+      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
+        tc_monitor.read_flag = true;   
+      } else {
+        tc_monitor.read_flag = false;
       }
       break;
 
     case THERMOCOUPLE_MONITOR_READ:
       read_thermocouple();
-      //thermocouple_monitor.last_read_ms = millis();
-      thermocouple_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
+      tc_monitor.last_read_ms = millis();
+      tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
+      //tc_monitor.isr_zero_crossing_flag = false;
+      tc_monitor.read_flag = false;
       break;
 
     default:
-      thermocouple_monitor.state = THERMOCOUPLE_MONITOR_INIT;
+      tc_monitor.state = THERMOCOUPLE_MONITOR_INIT;
       break;
   }
 }
 
 
 void read_thermocouple(){
-  tc_monitor.wand_celsius = tc_monitor.thermocouple.readCelsius();
+  digitalWrite(IRON_RELAY, LOW);
+  delay(heater_control_monitor.debounce_time_ms); // allow time for signal to stabilize after zero crossing
+  tc_monitor.wand_celsius = tc_monitor.thermocouple->readCelsius();
+  if (isnan(tc_monitor.wand_celsius)) {
+    tc_monitor.error_flag = true;
+    #ifdef TC_MAX31855
+      uint8_t fault = tc_monitor.thermocouple->readError();
+      if (fault & MAX31855_FAULT_OPEN) {
+        tc_monitor.error = THERMOCOUPLE_ERROR_DISCONNECTED;
+      } else if (fault & MAX31855_FAULT_SHORT_GND) {
+        tc_monitor.error = THERMOCOUPLE_ERROR_SHORTED_TO_GROUND;
+      } else if (fault & MAX31855_FAULT_SHORT_VCC) {
+        tc_monitor.error = THERMOCOUPLE_ERROR_SHORTED_TO_VCC;
+      } else {
+        tc_monitor.error = THERMOCOUPLE_ERROR_DISCONNECTED;
+      }
+    #endif
+    #ifdef TC_MAX6675
+      tc_monitor.error = THERMOCOUPLE_ERROR_DISCONNECTED;
+    #endif
+  } else {
+    tc_monitor.error_flag = false;
+    tc_monitor.error = THERMOCOUPLE_ERROR_NONE;
+  }
   #ifdef TC_MAX31855
-    tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple.readCelsius(), tc_monitor.thermocouple.readInternal());
+    tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple->readCelsius(), tc_monitor.thermocouple->readInternal());
   #endif
   #ifdef TC_MAX6675
-    tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple.readCelsius(), 25.0);
+    tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple->readCelsius(), 25.0);
   #endif
+  digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
 }
 
 
@@ -73,7 +110,7 @@ float convert_temperatureK_to_temperatureT(float temperatureK, float ambient_tem
 } 
 
 float convert_temperature_reading(const tipProfile &tip, float temperature_reading, float ambient_temperature){
-  switch(tip.thermocouple_type) {
+  switch(tip.tc_type) {
     case 'K':
       return temperature_reading;
     case 'J':
@@ -84,5 +121,11 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
       return convert_temperatureK_to_temperatureT(temperature_reading, ambient_temperature);
     default:
       return temperature_reading; // unknown type, return as-is
+  }
+}
+
+void IRAM_ATTR zero_crossing_ISR(void) {
+  if(tc_monitor.read_flag) {
+    tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
   }
 }
