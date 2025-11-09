@@ -21,7 +21,7 @@
 extern heaterControlMonitorData heater_control_monitor;
 extern thermocoupleMonitorData tc_monitor;
 extern potentiometerMonitorData pot_monitor;
-QuickPID myPID(&tc_monitor.wand_celsius, &tc_monitor.ambient_celsius, &pot_monitor.current_celsius, heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd,
+QuickPID myPID(&tc_monitor.wand_celsius, &heater_control_monitor.pid_output_ms, &pot_monitor.current_celsius, heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd,
                myPID.pMode::pOnError,
                myPID.dMode::dOnMeas,
                myPID.iAwMode::iAwClamp,
@@ -51,7 +51,7 @@ void heater_control_initialize(void){
   heater_control_monitor.next_relay_switch_time_ms = 0;
   
   heater_control_monitor.relay_on = false;
-  heater_control_monitor.can_compute_flag = true;
+  //heater_control_monitor.can_compute_flag = false;
 
   myPID.SetOutputLimits(0, heater_control_monitor.pid_max_output_ms);
   myPID.SetSampleTimeUs(heater_control_monitor.pid_output_window_size_ms * 1000);
@@ -63,23 +63,25 @@ void heater_control_initialize(void){
 void heater_control_tasks(void){
   heater_control_monitor.now_ms = millis();
   switch(heater_control_monitor.state){
+
     case HEATER_CONTROL_MONITOR_INIT:
       heater_control_monitor.state = HEATER_CONTROL_MONITOR_WAIT;
       break;
+    
     case HEATER_CONTROL_MONITOR_WAIT:
-      if (heater_control_monitor.can_compute_flag) {
-        heater_control_monitor.can_compute_flag = false;
+      if(!tc_monitor.error_flag && pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS){ 
         heater_control_monitor.state = HEATER_CONTROL_MONITOR_COMPUTE;
-      }
-      break;
-    case HEATER_CONTROL_MONITOR_COMPUTE:
-      if(!tc_monitor.error_flag) {
-        pid_compute();
       } else {
         heater_control_monitor.relay_on = false;
       }
+      break;
+    
+    case HEATER_CONTROL_MONITOR_COMPUTE:
+      Serial.println("heater control compute:");
+      pid_compute();
       heater_control_monitor.state = HEATER_CONTROL_MONITOR_WAIT;
       break;
+    
     default:
       heater_control_monitor.state = HEATER_CONTROL_MONITOR_INIT;
       break;
@@ -102,7 +104,7 @@ void pid_compute(void){
       heater_control_monitor.next_relay_switch_time_ms = heater_control_monitor.now_ms + heater_control_monitor.debounce_time_ms;
   }
   if (!heater_control_monitor.relay_on && 
-      heater_control_monitor.pid_output_ms > (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
+      heater_control_monitor.pid_output_ms >= (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
       heater_control_monitor.relay_on = true;
   } else if (heater_control_monitor.relay_on && 
              heater_control_monitor.pid_output_ms < (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {

@@ -2,7 +2,7 @@
 #define H_AOYUE906 
 
 // comment the following to disable Serial monitor 
-#define ENABLE_SERIAL
+//#define ENABLE_SERIAL
 
 #include "user_hardware.h"
 
@@ -30,7 +30,7 @@
 #define THERMOCOUPLE_DATA        19
 #define THERMOCOUPLE_CLOCK       18
 #define THERMOCOUPLE_CHIP_SELECT  5
-#define ERROR_LED                33
+#define ERROR_LED                32
 
 #define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer
 #define IRON_RELAY                2
@@ -38,7 +38,7 @@
 #define SDA_PIN                  21
 #define SCL_PIN                  22
 
-#define ZERO_CROSSING_PIN        23  
+#define ZERO_CROSSING_PIN        35 
 
 void MCU_initialize(void);
 
@@ -87,12 +87,11 @@ typedef struct {
   #ifdef TC_MAX31855
     Adafruit_MAX31855 * thermocouple; 
   #endif
-  thermocouple_monitor_states state;
+  volatile thermocouple_monitor_states state;
   float wand_celsius;
   float ambient_celsius; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
-  //bool isr_zero_crossing_flag;
   bool read_flag; 
   bool error_flag;
   thermocouple_error error;
@@ -127,7 +126,7 @@ typedef enum {
 } potentiometer_monitor_states;
 
 typedef struct {
-  potentiometer_monitor_states state; 
+  volatile potentiometer_monitor_states state; 
   unsigned int value;
   float current_celsius; 
   float previous_celsius;
@@ -159,12 +158,13 @@ typedef enum {
 
 
 typedef struct {
-  display_monitor_states state;
+  volatile display_monitor_states state;
   bool heater_off_color_scheme;
   unsigned int text_color;
   unsigned int bar_color;
-  unsigned int error_counter;
-
+  unsigned int display_counter;
+  unsigned long last_display_counter_update_time_ms;
+  unsigned long update_display_counter_every_ms;
 } displayMonitorData;
 
 
@@ -204,22 +204,22 @@ typedef struct {
 
 
 typedef struct {
-  heater_control_monitor_states state;
+  volatile heater_control_monitor_states state;
   Tunings aggressive_tune;
   Tunings conservative_tune;
   float gap_to_switch_to_aggressive_tune;
   byte debounce_time_ms;
 
   unsigned long pid_output_window_size_ms;
-  unsigned long pid_max_output_ms;
-  unsigned long pid_output_ms;
+  float pid_max_output_ms;
+  float pid_output_ms;
   unsigned long pid_window_start_time_ms;
 
   unsigned long next_relay_switch_time_ms;
   unsigned long now_ms;
   
   bool relay_on; 
-  bool can_compute_flag;
+  //bool can_compute_flag;
 
 } heaterControlMonitorData;
 

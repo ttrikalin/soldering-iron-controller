@@ -13,11 +13,13 @@
 #define SUPPLY_VOLTAGE_VOLTS 24.0
 #define MIN_TEMP_CELSIUS  180
 #define MAX_TEMP_CELSIUS  480
-#define PID_WINDOW_SIZE_MS 500
+#define PID_WINDOW_SIZE_MS 150
 
 
 #define ACTIVE_TIP t12_7G //aoyue_906 //t12_7
 
+#define TURN_OFF_TEMPERATURE_CELSIUS  197.0
+#define TURN_ON_TEMPERATURE_CELSIUS   200.0
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels

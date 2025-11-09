@@ -2,9 +2,17 @@
 
 extern thermocoupleMonitorData tc_monitor;
 extern heaterControlMonitorData heater_control_monitor;
+#ifdef TC_MAX31855
+  extern Adafruit_MAX31855 thermocouple;
+#endif
+#ifdef TC_MAX6675
+  extern MAX6675 thermocouple;
+#endif
+
 //const tipProfile ACTIVE_TIP = {"T12-7G",  7.0, 'K', true};
 
 void thermocouple_monitor_initialize(void) {
+  tc_monitor.thermocouple = &thermocouple;
   tc_monitor.state = THERMOCOUPLE_MONITOR_INIT;
   tc_monitor.wand_celsius = 0.0;
   tc_monitor.ambient_celsius = 0.0;
@@ -27,11 +35,16 @@ void thermocouple_monitor_tasks(void) {
       break;
 
     case THERMOCOUPLE_MONITOR_WAIT:
-      // if there is a zero crossing the ISR will set the state to THERMOCOUPLE_MONITOR_READ
-      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
+      // if there is a zero crossing the zero_crossing_ISR will be called
+      // if the tc_monitor.read_flag is set
+      // the zero_crossing_ISR will set the tc_monitor.state to THERMOCOUPLE_MONITOR_READ
+      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= (tc_monitor.read_every_ms << 2)) {
+        // if we have waited too long, force a read
+        tc_monitor.state = THERMOCOUPLE_MONITOR_READ;   
+        //tc_monitor.read_flag = false;
+        Serial.println("forced read");
+      } else if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
         tc_monitor.read_flag = true;   
-      } else {
-        tc_monitor.read_flag = false;
       }
       break;
 
@@ -39,7 +52,6 @@ void thermocouple_monitor_tasks(void) {
       read_thermocouple();
       tc_monitor.last_read_ms = millis();
       tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
-      //tc_monitor.isr_zero_crossing_flag = false;
       tc_monitor.read_flag = false;
       break;
 
@@ -81,6 +93,7 @@ void read_thermocouple(){
   #ifdef TC_MAX6675
     tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple->readCelsius(), 25.0);
   #endif
+
   digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
 }
 
@@ -126,6 +139,6 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
 
 void IRAM_ATTR zero_crossing_ISR(void) {
   if(tc_monitor.read_flag) {
-    tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
+    tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
   }
 }

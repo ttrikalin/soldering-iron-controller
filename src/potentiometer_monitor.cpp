@@ -1,6 +1,8 @@
 #include "aoyue906.h"
 
 extern potentiometerMonitorData pot_monitor;
+extern heaterControlMonitorData heater_control_monitor;
+extern displayMonitorData display_monitor;
 
 void potentiometer_monitor_initialize(void) {
   pot_monitor.state = POTENTIOMETER_MONITOR_INIT;
@@ -20,13 +22,20 @@ void potentiometer_monitor_tasks(void) {
       break;
 
     case POTENTIOMETER_MONITOR_WAIT:
-      if (millis() - pot_monitor.last_change_time_ms >= pot_monitor.read_every_ms) {
+      if (heater_control_monitor.now_ms - pot_monitor.last_change_time_ms >= pot_monitor.read_every_ms) {
         pot_monitor.state = POTENTIOMETER_MONITOR_READ;
       }
       break;
 
     case POTENTIOMETER_MONITOR_READ:
       read_potentiometer();
+      if(pot_monitor.current_celsius < TURN_OFF_TEMPERATURE_CELSIUS){
+        heater_control_monitor.relay_on = false;
+        display_monitor.heater_off_color_scheme = true;
+      } 
+      if(pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS){
+        display_monitor.heater_off_color_scheme = false;
+      }
       pot_monitor.state = POTENTIOMETER_MONITOR_WAIT;
       break;
 
