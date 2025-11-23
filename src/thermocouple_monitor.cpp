@@ -18,7 +18,7 @@ void thermocouple_monitor_initialize(void) {
   tc_monitor.ambient_celsius = 0.0;
   tc_monitor.last_read_ms = 0;
   tc_monitor.read_every_ms = 500;
-  tc_monitor.read_flag = false;
+  //tc_monitor.read_flag = false;
   //tc_monitor.isr_zero_crossing_flag = false;
   tc_monitor.error_flag = false;
   tc_monitor.error = THERMOCOUPLE_ERROR_NONE;
@@ -35,16 +35,9 @@ void thermocouple_monitor_tasks(void) {
       break;
 
     case THERMOCOUPLE_MONITOR_WAIT:
-      // if there is a zero crossing the zero_crossing_ISR will be called
-      // if the tc_monitor.read_flag is set
-      // the zero_crossing_ISR will set the tc_monitor.state to THERMOCOUPLE_MONITOR_READ
-      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= (tc_monitor.read_every_ms << 2)) {
-        // if we have waited too long, force a read
-        tc_monitor.state = THERMOCOUPLE_MONITOR_READ;   
-        //tc_monitor.read_flag = false;
-        Serial.println("forced read");
-      } else if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
-        tc_monitor.read_flag = true;   
+      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
+        //tc_monitor.read_flag = true;   
+        tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
       }
       break;
 
@@ -52,7 +45,7 @@ void thermocouple_monitor_tasks(void) {
       read_thermocouple();
       tc_monitor.last_read_ms = millis();
       tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
-      tc_monitor.read_flag = false;
+      //tc_monitor.read_flag = false;
       break;
 
     default:
@@ -137,8 +130,8 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
   }
 }
 
-void IRAM_ATTR zero_crossing_ISR(void) {
-  if(tc_monitor.read_flag) {
-    tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
-  }
-}
+// void IRAM_ATTR zero_crossing_ISR(void) {
+//   if(tc_monitor.read_flag) {
+//     tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
+//   }
+// }

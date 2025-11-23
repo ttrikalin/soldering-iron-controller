@@ -7,7 +7,7 @@ void MCU_initialize(void){
   pinMode(ERROR_LED, OUTPUT);
 
   pinMode(ZERO_CROSSING_PIN, INPUT);
-  attachInterrupt(ZERO_CROSSING_PIN, zero_crossing_ISR, RISING);
+  //attachInterrupt(ZERO_CROSSING_PIN, zero_crossing_ISR, RISING);
 
   digitalWrite(IRON_RELAY, LOW);
   digitalWrite(ERROR_LED, HIGH); 
