@@ -2,8 +2,8 @@
 #define SUPPLY_HARDWARE_CHARACTERISTICS_H
 
 // select platform 
-//#define ESP32_WROOM
-#define ARDUINO_NANO
+#define ESP32_WROOM
+//#define ARDUINO_NANO
 
 
 // select which thermocouple and thermocouple library to use
@@ -11,11 +11,11 @@
 //#define TC_MAX31855
 #define TC_MAX6675
 
-#define SUPPLY_POWER_WATTS  30.0
-#define SUPPLY_VOLTAGE_VOLTS 24.0
-#define MIN_TEMP_CELSIUS  180
-#define MAX_TEMP_CELSIUS  480
-#define PID_WINDOW_SIZE_MS 150
+#define SUPPLY_POWER_WATTS    90.65
+#define SUPPLY_VOLTAGE_VOLTS  18.5
+#define MIN_TEMP_CELSIUS     180
+#define MAX_TEMP_CELSIUS     480
+#define PID_WINDOW_SIZE_MS   150
 
 
 #define ACTIVE_TIP t12_7G //aoyue_906 //t12_7
@@ -28,7 +28,7 @@
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-
+#define SCREEN_ADDRESS 0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 
 
 #endif // SUPPLY_HARDWARE_CHARACTERISTICS_H

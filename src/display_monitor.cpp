@@ -22,10 +22,12 @@ void display_monitor_initialize(void){
   #ifdef ESP32_WROOM
     Wire.begin(SDA_PIN, SCL_PIN);
   #endif
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever
   }
+  
   display.clearDisplay();
 }
 
