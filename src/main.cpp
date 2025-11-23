@@ -16,7 +16,6 @@ displayMonitorData display_monitor;
 heaterControlMonitorData heater_control_monitor;
 extern QuickPID myPID; 
 
-
 void setup(void){
   MCU_initialize();
   potentiometer_monitor_initialize();
@@ -34,6 +33,16 @@ void loop(void){
   // MCU Tasks
   digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
   digitalWrite(ERROR_LED, tc_monitor.error_flag ? HIGH : LOW);
+  #ifdef ENABLE_SERIAL
+    Serial.print("TC Temp: ");
+    Serial.print(tc_monitor.wand_celsius);
+    Serial.print(" C, Pot Temp: ");
+    Serial.print(pot_monitor.current_celsius);
+    Serial.print(" C, PID Output ms: ");
+    Serial.print(heater_control_monitor.pid_output_ms);
+    Serial.print(" ms, Relay On: ");
+    Serial.println(heater_control_monitor.relay_on ? "Yes" : "No");
+  #endif
 }
 
 

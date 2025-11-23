@@ -26,7 +26,10 @@ void display_monitor_initialize(void){
 
 
 void display_monitor_tasks(void){
-  //Serial.println(display_monitor.state);
+  #ifdef ENABLE_SERIAL
+    Serial.print("Display Monitor State: ");  
+    Serial.println(display_monitor.state);
+  #endif
   switch(display_monitor.state){
     case DISPLAY_MONITOR_INIT:
       display_splash_screen_message();

@@ -66,7 +66,7 @@ void read_thermocouple(){
   digitalWrite(IRON_RELAY, LOW);
   delay(heater_control_monitor.debounce_time_ms); // allow time for signal to stabilize after zero crossing
   tc_monitor.wand_celsius = tc_monitor.thermocouple->readCelsius();
-  if (isnan(tc_monitor.wand_celsius)) {
+  if (isnan(tc_monitor.wand_celsius) || tc_monitor.wand_celsius == 0.0) {
     tc_monitor.error_flag = true;
     #ifdef TC_MAX31855
       uint8_t fault = tc_monitor.thermocouple->readError();

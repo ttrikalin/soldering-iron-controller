@@ -2,7 +2,7 @@
 #define H_AOYUE906 
 
 // comment the following to disable Serial monitor 
-//#define ENABLE_SERIAL
+#define ENABLE_SERIAL
 
 #include "user_hardware.h"
 
