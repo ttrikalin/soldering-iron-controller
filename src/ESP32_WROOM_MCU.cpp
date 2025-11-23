@@ -6,13 +6,13 @@ void MCU_initialize(void){
   pinMode(IRON_RELAY, OUTPUT);
   pinMode(ERROR_LED, OUTPUT);
 
-  pinMode(ZERO_CROSSING_PIN, INPUT);
+  //pinMode(ZERO_CROSSING_PIN, INPUT);
   //attachInterrupt(ZERO_CROSSING_PIN, zero_crossing_ISR, RISING);
 
   digitalWrite(IRON_RELAY, LOW);
   digitalWrite(ERROR_LED, HIGH); 
   #ifdef ENABLE_SERIAL
-    Serial.begin(115200);
+    Serial.begin(MCU_SERIAL_BAUD);
   #endif
 
   #ifdef TC_MAX31855

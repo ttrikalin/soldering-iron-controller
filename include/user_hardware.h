@@ -1,11 +1,13 @@
 #ifndef SUPPLY_HARDWARE_CHARACTERISTICS_H
 #define SUPPLY_HARDWARE_CHARACTERISTICS_H
 
+// select platform 
+#define ESP32_WROOM
+//#define ARDUINO_NANO
+
 
 // select which thermocouple and thermocouple library to use
 // Adafruit MAX31855 or MAX6675
-
-
 //#define TC_MAX31855
 #define TC_MAX6675
 

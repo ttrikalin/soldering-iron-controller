@@ -6,6 +6,7 @@
 
 #include "user_hardware.h"
 
+
 #include <cmath>
 #include <SPI.h>
 #include <Wire.h>
@@ -22,23 +23,17 @@
   #define THERMOCOUPLE_DELAY_MS 250
 #endif
 
+
+#ifdef ESP32_WROOM 
+  #include "esp32_WROOM.h"
+#endif
+#ifdef ARDUINO_NAN0
+  #include "arduino_nano.h"
+#endif
+
 /*****************************************************************************/
-/* ESP32 WROOM32 SETUP                                                       */
+/* MCU WROOM32 SETUP                                                       */
 /*****************************************************************************/
-
-// Thermocouple 
-#define THERMOCOUPLE_DATA        19
-#define THERMOCOUPLE_CLOCK       18
-#define THERMOCOUPLE_CHIP_SELECT  5
-#define ERROR_LED                32
-
-#define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer
-#define IRON_RELAY                2
-
-#define SDA_PIN                  21
-#define SCL_PIN                  22
-
-#define ZERO_CROSSING_PIN        35 
 
 void MCU_initialize(void);
 
