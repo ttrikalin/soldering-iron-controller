@@ -16,7 +16,12 @@ void display_monitor_initialize(void){
   display_monitor.last_display_counter_update_time_ms = 0;
   display_monitor.update_display_counter_every_ms = 2000;
 
-  Wire.begin(SDA_PIN, SCL_PIN);
+  #ifdef ARDUINO_NANO
+    Wire.begin(); 
+  #endif
+  #ifdef ESP32_WROOM
+    Wire.begin(SDA_PIN, SCL_PIN);
+  #endif
   if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
     Serial.println(F("SSD1306 allocation failed"));
     for(;;); // Don't proceed, loop forever

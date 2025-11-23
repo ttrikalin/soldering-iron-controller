@@ -2,8 +2,8 @@
 #define SUPPLY_HARDWARE_CHARACTERISTICS_H
 
 // select platform 
-#define ESP32_WROOM
-//#define ARDUINO_NANO
+//#define ESP32_WROOM
+#define ARDUINO_NANO
 
 
 // select which thermocouple and thermocouple library to use

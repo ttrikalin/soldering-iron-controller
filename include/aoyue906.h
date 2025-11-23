@@ -7,7 +7,7 @@
 #include "user_hardware.h"
 
 
-#include <cmath>
+//#include <cmath>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -24,10 +24,12 @@
 #endif
 
 
-#ifdef ESP32_WROOM 
+#ifdef ESP32_WROOM  
+  #include <cmath>
   #include "esp32_WROOM.h"
 #endif
-#ifdef ARDUINO_NAN0
+#ifdef ARDUINO_NANO
+  #include <math.h>
   #include "arduino_nano.h"
 #endif
 

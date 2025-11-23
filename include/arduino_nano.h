@@ -1,6 +1,6 @@
 
-#ifndef ARDUINO_NANO
-#define ARDUINO_NANO
+#ifndef H_ARDUINO_NANO
+#define H_ARDUINO_NANO
 
 
 /*****************************************************************************/
