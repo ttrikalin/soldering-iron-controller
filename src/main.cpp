@@ -41,7 +41,9 @@ void loop(void){
     Serial.print(" C, PID Output ms: ");
     Serial.print(heater_control_monitor.pid_output_ms);
     Serial.print(" ms, Relay On: ");
-    Serial.println(heater_control_monitor.relay_on ? "Yes" : "No");
+    Serial.print(heater_control_monitor.relay_on ? "Yes" : "No");
+    Serial.print(", TC connected: ");
+    Serial.println(tc_monitor.connect_flag ? "Yes" : "No");
   #endif
 }
 

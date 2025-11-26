@@ -104,10 +104,10 @@ void pid_compute(void){
       heater_control_monitor.next_relay_switch_time_ms = heater_control_monitor.now_ms + heater_control_monitor.debounce_time_ms;
   }
   if (!heater_control_monitor.relay_on && 
-      heater_control_monitor.pid_output_ms >= (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
+      heater_control_monitor.pid_output_ms > (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
       heater_control_monitor.relay_on = true;
   } else if (heater_control_monitor.relay_on && 
-             heater_control_monitor.pid_output_ms < (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
+             heater_control_monitor.pid_output_ms <= (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
       heater_control_monitor.relay_on = false;
   }
 }

@@ -9,18 +9,15 @@ extern heaterControlMonitorData heater_control_monitor;
   extern MAX6675 thermocouple;
 #endif
 
-//const tipProfile ACTIVE_TIP = {"T12-7G",  7.0, 'K', true};
-
 void thermocouple_monitor_initialize(void) {
   tc_monitor.thermocouple = &thermocouple;
   tc_monitor.state = THERMOCOUPLE_MONITOR_INIT;
   tc_monitor.wand_celsius = 0.0;
   tc_monitor.ambient_celsius = 0.0;
   tc_monitor.last_read_ms = 0;
-  tc_monitor.read_every_ms = 500;
-  //tc_monitor.read_flag = false;
-  //tc_monitor.isr_zero_crossing_flag = false;
+  tc_monitor.read_every_ms = 250;
   tc_monitor.error_flag = false;
+  tc_monitor.connect_flag = false;
   tc_monitor.error = THERMOCOUPLE_ERROR_NONE;
   tc_monitor.tip.name = ACTIVE_TIP.name;
   tc_monitor.tip.resistance = ACTIVE_TIP.resistance;
@@ -35,8 +32,8 @@ void thermocouple_monitor_tasks(void) {
       break;
 
     case THERMOCOUPLE_MONITOR_WAIT:
+      tc_monitor.connect_flag = false;
       if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
-        //tc_monitor.read_flag = true;   
         tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
       }
       break;
@@ -57,7 +54,9 @@ void thermocouple_monitor_tasks(void) {
 
 void read_thermocouple(){
   digitalWrite(IRON_RELAY, LOW);
-  delay(heater_control_monitor.debounce_time_ms); // allow time for signal to stabilize after zero crossing
+  delay(heater_control_monitor.debounce_time_ms); // deadtime + allow time for signal to stabilize 
+  tc_monitor.connect_flag = true;
+  digitalWrite(THERMOCOUPLE_CONNECT, HIGH);
   tc_monitor.wand_celsius = tc_monitor.thermocouple->readCelsius();
   if (isnan(tc_monitor.wand_celsius) || tc_monitor.wand_celsius == 0.0) {
     tc_monitor.error_flag = true;
@@ -86,7 +85,9 @@ void read_thermocouple(){
   #ifdef TC_MAX6675
     tc_monitor.ambient_celsius = convert_temperature_reading(tc_monitor.tip, tc_monitor.thermocouple->readCelsius(), 25.0);
   #endif
-
+  tc_monitor.connect_flag = false;
+  digitalWrite(THERMOCOUPLE_CONNECT, LOW);
+  delay(10); // deadtime to protect thermocouple 
   digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
 }
 
@@ -130,8 +131,3 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
   }
 }
 
-// void IRAM_ATTR zero_crossing_ISR(void) {
-//   if(tc_monitor.read_flag) {
-//     tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
-//   }
-// }

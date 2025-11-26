@@ -4,13 +4,20 @@ extern thermocoupleMonitorData tc_monitor;
 
 void MCU_initialize(void){
   pinMode(IRON_RELAY, OUTPUT);
+  pinMode(THERMOCOUPLE_CONNECT, OUTPUT);
   pinMode(ERROR_LED, OUTPUT);
 
-  //pinMode(ZERO_CROSSING_PIN, INPUT);
-  //attachInterrupt(ZERO_CROSSING_PIN, zero_crossing_ISR, RISING);
-
+  digitalWrite(THERMOCOUPLE_CONNECT, LOW);
   digitalWrite(IRON_RELAY, LOW);
-  digitalWrite(ERROR_LED, HIGH); 
+
+  // just to indicate initialization startup on the ERROR_LED
+  for(int i = 0; i < 3; i++){
+    digitalWrite(ERROR_LED, HIGH);
+    delay(150);
+    digitalWrite(ERROR_LED, LOW);
+    delay(150);
+  } 
+
   #ifdef ENABLE_SERIAL
     Serial.begin(MCU_SERIAL_BAUD);
   #endif
@@ -24,8 +31,7 @@ void MCU_initialize(void){
   #ifdef TC_MAX6675
     // no setup required for MAX6675
   #endif
-
-  digitalWrite(ERROR_LED, LOW); 
+  
 }
 
 

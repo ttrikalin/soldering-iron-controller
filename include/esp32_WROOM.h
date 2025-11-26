@@ -10,6 +10,8 @@
 #define THERMOCOUPLE_DATA        19
 #define THERMOCOUPLE_CLOCK       18
 #define THERMOCOUPLE_CHIP_SELECT  5
+#define THERMOCOUPLE_CONNECT     16
+
 #define ERROR_LED                32
 
 #define TEMPERATURE_SET_PIN      34  // ADC pin for temperature set potentiometer

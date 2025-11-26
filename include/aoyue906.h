@@ -89,7 +89,7 @@ typedef struct {
   float ambient_celsius; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
-  //bool read_flag; 
+  bool connect_flag; 
   bool error_flag;
   thermocouple_error error;
   tipProfile tip;
