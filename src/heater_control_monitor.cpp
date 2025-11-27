@@ -77,7 +77,9 @@ void heater_control_tasks(void){
       break;
     
     case HEATER_CONTROL_MONITOR_COMPUTE:
-      Serial.println("heater control compute:");
+      #ifdef ENABLE_SERIAL
+        Serial.println("heater control compute:");
+      #endif
       pid_compute();
       heater_control_monitor.state = HEATER_CONTROL_MONITOR_WAIT;
       break;
@@ -97,8 +99,11 @@ void pid_compute(void){
   } else {
     myPID.SetTunings(heater_control_monitor.conservative_tune.Kp, heater_control_monitor.conservative_tune.Ki, heater_control_monitor.conservative_tune.Kd);
   }
-  if (myPID.Compute()) {
-    heater_control_monitor.pid_window_start_time_ms = heater_control_monitor.now_ms;
+  if(tc_monitor.new_measurement_flag) {
+    if (myPID.Compute()) {
+      heater_control_monitor.pid_window_start_time_ms = heater_control_monitor.now_ms;
+    }
+    tc_monitor.new_measurement_flag = false;
   }
   if (heater_control_monitor.now_ms > heater_control_monitor.next_relay_switch_time_ms) {
       heater_control_monitor.next_relay_switch_time_ms = heater_control_monitor.now_ms + heater_control_monitor.debounce_time_ms;

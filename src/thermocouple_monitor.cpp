@@ -15,9 +15,10 @@ void thermocouple_monitor_initialize(void) {
   tc_monitor.wand_celsius = 0.0;
   tc_monitor.ambient_celsius = 0.0;
   tc_monitor.last_read_ms = 0;
-  tc_monitor.read_every_ms = 250;
+  tc_monitor.read_every_ms = 500;
   tc_monitor.error_flag = false;
   tc_monitor.connect_flag = false;
+  tc_monitor.new_measurement_flag = false;
   tc_monitor.error = THERMOCOUPLE_ERROR_NONE;
   tc_monitor.tip.name = ACTIVE_TIP.name;
   tc_monitor.tip.resistance = ACTIVE_TIP.resistance;
@@ -41,8 +42,8 @@ void thermocouple_monitor_tasks(void) {
     case THERMOCOUPLE_MONITOR_READ:
       read_thermocouple();
       tc_monitor.last_read_ms = millis();
+      tc_monitor.new_measurement_flag = true;
       tc_monitor.state = THERMOCOUPLE_MONITOR_WAIT;
-      //tc_monitor.read_flag = false;
       break;
 
     default:
@@ -54,9 +55,10 @@ void thermocouple_monitor_tasks(void) {
 
 void read_thermocouple(){
   digitalWrite(IRON_RELAY, LOW);
-  delay(heater_control_monitor.debounce_time_ms); // deadtime + allow time for signal to stabilize 
+  delay(5); // deadtime + allow time for signal to stabilize 
   tc_monitor.connect_flag = true;
   digitalWrite(THERMOCOUPLE_CONNECT, HIGH);
+  delay(THERMOCOUPLE_CONVERSION_DELAY_MS);
   tc_monitor.wand_celsius = tc_monitor.thermocouple->readCelsius();
   if (isnan(tc_monitor.wand_celsius) || tc_monitor.wand_celsius == 0.0) {
     tc_monitor.error_flag = true;
@@ -87,7 +89,7 @@ void read_thermocouple(){
   #endif
   tc_monitor.connect_flag = false;
   digitalWrite(THERMOCOUPLE_CONNECT, LOW);
-  delay(10); // deadtime to protect thermocouple 
+  delay(5); // deadtime to protect thermocouple 
   digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
 }
 

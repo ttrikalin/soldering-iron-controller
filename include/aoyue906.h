@@ -89,8 +89,9 @@ typedef struct {
   float ambient_celsius; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
-  bool connect_flag; 
   bool error_flag;
+  bool connect_flag; 
+  bool new_measurement_flag;
   thermocouple_error error;
   tipProfile tip;
 } thermocoupleMonitorData;
@@ -98,8 +99,6 @@ typedef struct {
 void thermocouple_monitor_initialize(void);
 void thermocouple_monitor_tasks(void);
 void read_thermocouple();
-
-//void IRAM_ATTR zero_crossing_ISR(void);
 
 float voltage_from_temperature(float gain, float temperature, float ambient_temperature);
 float temperature_from_voltage(float gain, float voltage, float ambient_temperature);
