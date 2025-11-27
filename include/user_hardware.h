@@ -17,7 +17,7 @@
 #define SUPPLY_VOLTAGE_VOLTS  18.5
 #define MIN_TEMP_CELSIUS     180
 #define MAX_TEMP_CELSIUS     480
-#define PID_WINDOW_SIZE_MS   200
+#define PID_WINDOW_SIZE_MS   500
 
 #define ACTIVE_TIP t12_7G //aoyue_906 //t12_7
 
@@ -30,7 +30,7 @@
 
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     -1 // Reset pin # (or -1 if sharing Arduino reset pin)
-#define SCREEN_ADDRESS 0x3D ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
+#define SCREEN_ADDRESS 0x3C ///< See OLED display jumper for address
 
 
 #endif // SUPPLY_HARDWARE_CHARACTERISTICS_H

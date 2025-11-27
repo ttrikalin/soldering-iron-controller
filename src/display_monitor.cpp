@@ -82,10 +82,10 @@ void display_monitor_tasks(void){
       if (pot_monitor.current_celsius < TURN_OFF_TEMPERATURE_CELSIUS) {
         switch(display_monitor.display_counter) {
           case 0: 
-          case 1:
           case 2:
             display_monitor.state = DISPLAY_MONITOR_OFF_MESSAGE;
             break;
+          case 1:
           case 3:
             display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
             break;
@@ -238,7 +238,10 @@ void show_temperature(bool show_tc_temp){
   display.setTextSize(1);
   display.setCursor(0,0); 
   if(show_tc_temp) {
-    display.print("  Now ");
+    display.print("  Now [->");
+    display.print((int) round(pot_monitor.current_celsius));
+    display.print((char)247); 
+    display.print("C]");
     temperature = (int) round(tc_monitor.wand_celsius); 
   } else {
     display.print("  Set "); 

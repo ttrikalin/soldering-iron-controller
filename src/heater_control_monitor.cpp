@@ -30,20 +30,21 @@ QuickPID myPID(&tc_monitor.wand_celsius, &heater_control_monitor.pid_output_ms, 
 void heater_control_initialize(void){
   heater_control_monitor.state = HEATER_CONTROL_MONITOR_INIT;
 
-  heater_control_monitor.aggressive_tune.Kp = 5.0;
-  heater_control_monitor.aggressive_tune.Ki = 2.0;
-  heater_control_monitor.aggressive_tune.Kd = 1.0;
+  heater_control_monitor.aggressive_tune.Kp = 2.750;
+  heater_control_monitor.aggressive_tune.Ki = 0.08;
+  heater_control_monitor.aggressive_tune.Kd = 0.00;
 
-  heater_control_monitor.conservative_tune.Kp = 1.0;
-  heater_control_monitor.conservative_tune.Ki = 0.5;  
-  heater_control_monitor.conservative_tune.Kd = 0.20;
+  heater_control_monitor.conservative_tune.Kp = 2.750;
+  heater_control_monitor.conservative_tune.Ki = 0.08;  
+  heater_control_monitor.conservative_tune.Kd = 0.00;
 
-  heater_control_monitor.gap_to_switch_to_aggressive_tune = 50.0;
+  heater_control_monitor.gap_to_switch_to_aggressive_tune = 150.0;
+  heater_control_monitor.gap = 0.0;
 
-  heater_control_monitor.debounce_time_ms = 20;
+  heater_control_monitor.debounce_time_ms = 0;
   
-  heater_control_monitor.pid_output_window_size_ms = PID_WINDOW_SIZE_MS;
-  heater_control_monitor.pid_max_output_ms = get_pid_max_output(tc_monitor.tip, heater_control_monitor.pid_output_window_size_ms, SUPPLY_POWER_WATTS, SUPPLY_VOLTAGE_VOLTS);
+  heater_control_monitor.pid_output_window_size_ms = PID_WINDOW_SIZE_MS + THERMOCOUPLE_CONVERSION_DELAY_MS;
+  heater_control_monitor.pid_max_output_ms = get_pid_max_output(tc_monitor.tip, heater_control_monitor.pid_output_window_size_ms - THERMOCOUPLE_CONVERSION_DELAY_MS, SUPPLY_POWER_WATTS, SUPPLY_VOLTAGE_VOLTS);
   heater_control_monitor.pid_output_ms = 0;
 
   heater_control_monitor.pid_window_start_time_ms = 0;
@@ -92,19 +93,19 @@ void heater_control_tasks(void){
 
 
 void pid_compute(void){
-  float gap = abs(pot_monitor.current_celsius - tc_monitor.wand_celsius); //distance away from setpoint
+  heater_control_monitor.gap = abs(pot_monitor.current_celsius - tc_monitor.wand_celsius); //distance away from setpoint
 
-  if (gap < heater_control_monitor.gap_to_switch_to_aggressive_tune) {  
+  if (heater_control_monitor.gap < heater_control_monitor.gap_to_switch_to_aggressive_tune) {  
     myPID.SetTunings(heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd);
   } else {
     myPID.SetTunings(heater_control_monitor.conservative_tune.Kp, heater_control_monitor.conservative_tune.Ki, heater_control_monitor.conservative_tune.Kd);
   }
-  if(tc_monitor.new_measurement_flag) {
+  //if(tc_monitor.new_measurement_flag) {
     if (myPID.Compute()) {
       heater_control_monitor.pid_window_start_time_ms = heater_control_monitor.now_ms;
     }
-    tc_monitor.new_measurement_flag = false;
-  }
+    //tc_monitor.new_measurement_flag = false;
+  //}
   if (heater_control_monitor.now_ms > heater_control_monitor.next_relay_switch_time_ms) {
       heater_control_monitor.next_relay_switch_time_ms = heater_control_monitor.now_ms + heater_control_monitor.debounce_time_ms;
   }

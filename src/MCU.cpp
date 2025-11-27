@@ -34,4 +34,8 @@ void MCU_initialize(void){
   
 }
 
+void MCU_tasks(void){
+  // digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
+  digitalWrite(ERROR_LED, tc_monitor.error_flag ? HIGH : LOW);
+}
 

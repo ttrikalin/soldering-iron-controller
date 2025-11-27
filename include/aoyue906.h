@@ -6,6 +6,9 @@
 
 #include "user_hardware.h"
 
+#define VERSION_STRING "0.0.1"
+
+
 
 //#include <cmath>
 #include <SPI.h>
@@ -38,6 +41,7 @@
 /*****************************************************************************/
 
 void MCU_initialize(void);
+void MCU_tasks(void);
 
 /*****************************************************************************/
 /* THERMOCOUPLE MONITOR                                                      */
@@ -99,6 +103,8 @@ typedef struct {
 void thermocouple_monitor_initialize(void);
 void thermocouple_monitor_tasks(void);
 void read_thermocouple();
+
+float get_calibrated_measurement(float temperature_measurement);
 
 float voltage_from_temperature(float gain, float temperature, float ambient_temperature);
 float temperature_from_voltage(float gain, float voltage, float ambient_temperature);
@@ -204,8 +210,9 @@ typedef struct {
   Tunings aggressive_tune;
   Tunings conservative_tune;
   float gap_to_switch_to_aggressive_tune;
+  float gap;
   byte debounce_time_ms;
-
+  
   unsigned long pid_output_window_size_ms;
   float pid_max_output_ms;
   float pid_output_ms;

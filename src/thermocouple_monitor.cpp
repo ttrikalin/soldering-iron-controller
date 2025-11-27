@@ -34,7 +34,14 @@ void thermocouple_monitor_tasks(void) {
 
     case THERMOCOUPLE_MONITOR_WAIT:
       tc_monitor.connect_flag = false;
-      if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
+      if(heater_control_monitor.gap > heater_control_monitor.gap_to_switch_to_aggressive_tune){
+        tc_monitor.read_every_ms = 500;
+      } else {
+        tc_monitor.read_every_ms = 500; 
+      }
+      
+      //if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
+      if(heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms >= heater_control_monitor.pid_max_output_ms){
         tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
       }
       break;
@@ -59,7 +66,7 @@ void read_thermocouple(){
   tc_monitor.connect_flag = true;
   digitalWrite(THERMOCOUPLE_CONNECT, HIGH);
   delay(THERMOCOUPLE_CONVERSION_DELAY_MS);
-  tc_monitor.wand_celsius = tc_monitor.thermocouple->readCelsius();
+  tc_monitor.wand_celsius = get_calibrated_measurement(tc_monitor.thermocouple->readCelsius());
   if (isnan(tc_monitor.wand_celsius) || tc_monitor.wand_celsius == 0.0) {
     tc_monitor.error_flag = true;
     #ifdef TC_MAX31855
@@ -133,3 +140,48 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
   }
 }
 
+
+
+//    actual T12_on_K_TC
+// 1    20.0           7
+// 2    34.0          14
+// 3    39.0          14
+// 4    40.0          15
+// 5    46.5          15
+// 6    49.5          16
+// 7    52.0          17
+// 8    55.0          18
+// 9    61.0          20
+// 10   64.5          21
+// 11   67.0          22
+// 12   70.0          23
+// 13   74.0          24
+// 14   78.0          25
+// 15   84.0          28
+// 16   38.0          13
+// 17  238.0         102
+
+// > lm(data = dat, actual ~ T12_on_K_TC) |> summary()
+
+// Call:
+// lm(formula = actual ~ T12_on_K_TC, data = dat)
+
+// Residuals:
+//      Min       1Q   Median       3Q      Max 
+// -10.6068  -5.2751   0.6204   4.3325   8.5597 
+
+// Coefficients:
+//             Estimate Std. Error t value Pr(>|t|)    
+// (Intercept) 13.00045    2.26109    5.75 3.84e-05 ***
+// T12_on_K_TC  2.25759    0.07331   30.80 5.65e-15 ***
+// ---
+// Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+// Residual standard error: 6.151 on 15 degrees of freedom
+// Multiple R-squared:  0.9844,	Adjusted R-squared:  0.9834 
+// F-statistic: 948.4 on 1 and 15 DF,  p-value: 5.649e-15
+
+
+float get_calibrated_measurement(float temperature_reading){
+  return 13 + 2.25759  * temperature_reading;
+}

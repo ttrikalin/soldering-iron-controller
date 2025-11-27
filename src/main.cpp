@@ -29,10 +29,8 @@ void loop(void){
   thermocouple_monitor_tasks();
   display_monitor_tasks();
   heater_control_tasks();
-
-  // MCU Tasks
-  digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
-  digitalWrite(ERROR_LED, tc_monitor.error_flag ? HIGH : LOW);
+  MCU_tasks();
+  
   #ifdef ENABLE_SERIAL
     Serial.print("TC Temp: ");
     Serial.print(tc_monitor.wand_celsius);
