@@ -2,6 +2,8 @@
 
 extern thermocoupleMonitorData tc_monitor;
 extern heaterControlMonitorData heater_control_monitor;
+extern mcuMonitorData mcu_monitor;
+
 #ifdef TC_MAX31855
   extern Adafruit_MAX31855 thermocouple;
 #endif
@@ -34,14 +36,8 @@ void thermocouple_monitor_tasks(void) {
 
     case THERMOCOUPLE_MONITOR_WAIT:
       tc_monitor.connect_flag = false;
-      if(heater_control_monitor.gap > heater_control_monitor.gap_to_switch_to_aggressive_tune){
-        tc_monitor.read_every_ms = 500;
-      } else {
-        tc_monitor.read_every_ms = 500; 
-      }
-      
-      //if (heater_control_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms) {
-      if(heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms >= heater_control_monitor.pid_max_output_ms){
+      //if(heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms >= heater_control_monitor.pid_max_output_ms){
+      if(mcu_monitor.now_ms - tc_monitor.last_read_ms >= tc_monitor.read_every_ms){
         tc_monitor.state = THERMOCOUPLE_MONITOR_READ;
       }
       break;
@@ -61,8 +57,8 @@ void thermocouple_monitor_tasks(void) {
 
 
 void read_thermocouple(){
-  digitalWrite(IRON_RELAY, LOW);
-  delay(5); // deadtime + allow time for signal to stabilize 
+  analogWrite(IRON_RELAY, 0);
+  delayMicroseconds(heater_control_monitor.dead_time_us); // deadtime + allow time for signal to stabilize 
   tc_monitor.connect_flag = true;
   digitalWrite(THERMOCOUPLE_CONNECT, HIGH);
   delay(THERMOCOUPLE_CONVERSION_DELAY_MS);
@@ -96,8 +92,8 @@ void read_thermocouple(){
   #endif
   tc_monitor.connect_flag = false;
   digitalWrite(THERMOCOUPLE_CONNECT, LOW);
-  delay(5); // deadtime to protect thermocouple 
-  digitalWrite(IRON_RELAY, heater_control_monitor.relay_on ? HIGH : LOW);
+  delayMicroseconds(heater_control_monitor.dead_time_us); // deadtime to protect thermocouple 
+  analogWrite(IRON_RELAY, heater_control_monitor.pid_duty_cycle_int);
 }
 
 

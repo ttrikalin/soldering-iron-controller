@@ -1,5 +1,6 @@
 #include "aoyue906.h"
 
+extern mcuMonitorData mcu_monitor;
 extern displayMonitorData display_monitor;
 extern thermocoupleMonitorData tc_monitor;
 extern potentiometerMonitorData pot_monitor;
@@ -33,6 +34,7 @@ void display_monitor_initialize(void){
 
 
 void display_monitor_tasks(void){
+  display_monitor.now_ms = millis();
   #ifdef ENABLE_SERIAL
     Serial.print("Display Monitor State: ");  
     Serial.println(display_monitor.state);
@@ -51,8 +53,8 @@ void display_monitor_tasks(void){
       } 
       
       if (tc_monitor.error_flag || pot_monitor.current_celsius < TURN_OFF_TEMPERATURE_CELSIUS) {
-        if(heater_control_monitor.now_ms - display_monitor.last_display_counter_update_time_ms >= display_monitor.update_display_counter_every_ms) {
-          display_monitor.last_display_counter_update_time_ms = heater_control_monitor.now_ms;
+        if(display_monitor.now_ms - display_monitor.last_display_counter_update_time_ms >= display_monitor.update_display_counter_every_ms) {
+          display_monitor.last_display_counter_update_time_ms = display_monitor.now_ms;
           display_monitor.display_counter++;
           if(display_monitor.display_counter > 3) {
             display_monitor.display_counter = 0;
@@ -143,7 +145,10 @@ void display_splash_screen_message(void){
   display.setCursor(0, 15);
   display.println("   AOYUE"); 
   display.println("    906");
-  display.println(" ttrikalin");
+  display.print("   "); 
+  display.println(F(VERSION_STRING));
+  //display.clearDisplay();
+
   display.invertDisplay(display_monitor.heater_off_color_scheme);
   display.display();
 }
@@ -238,10 +243,17 @@ void show_temperature(bool show_tc_temp){
   display.setTextSize(1);
   display.setCursor(0,0); 
   if(show_tc_temp) {
-    display.print("  Now [->");
-    display.print((int) round(pot_monitor.current_celsius));
-    display.print((char)247); 
-    display.print("C]");
+    display.print("  Now [ "); 
+    if(mcu_monitor.machine_on){
+      display.print("--> ");
+      display.print((int) round(pot_monitor.current_celsius));
+      display.print((char)247);
+      display.print("C  ]");
+    } else {
+      display.print("OFF ]"); 
+    }
+     
+    
     temperature = (int) round(tc_monitor.wand_celsius); 
   } else {
     display.print("  Set "); 
@@ -270,7 +282,7 @@ void show_power_bar(){
   int bar_width = 0; 
   if (pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS) {
     // only show power bar if the potentiometer is set above the turn-on temperature
-    bar_width = (int) round((heater_control_monitor.pid_output_ms / heater_control_monitor.pid_max_output_ms) * (SCREEN_WIDTH - 10));
+    bar_width = (int) round((heater_control_monitor.pid_duty_cycle / ((1 << mcu_monitor.pid_resolution)-1)) * (SCREEN_WIDTH - 10));
   }
   display.drawRect(2, (int) SCREEN_HEIGHT - 10, SCREEN_WIDTH - 5, 8, display_monitor.bar_color);
   display.fillRect(5, (int) SCREEN_HEIGHT - 8, bar_width, 4, display_monitor.bar_color);
@@ -278,9 +290,9 @@ void show_power_bar(){
     Serial.print("Power bar width: ");
     Serial.println(bar_width);
     Serial.print("PID output ms: ");
-    Serial.println(heater_control_monitor.pid_output_ms);
+    Serial.println(heater_control_monitor.pid_duty_cycle);
     Serial.print("PID max output ms: ");
-    Serial.println(heater_control_monitor.pid_max_output_ms);
+    Serial.println((1 << mcu_monitor.pid_resolution)-1);
   #endif
 }
 

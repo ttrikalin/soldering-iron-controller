@@ -3,6 +3,7 @@
 extern potentiometerMonitorData pot_monitor;
 extern heaterControlMonitorData heater_control_monitor;
 extern displayMonitorData display_monitor;
+extern mcuMonitorData mcu_monitor;
 
 void potentiometer_monitor_initialize(void) {
   pot_monitor.state = POTENTIOMETER_MONITOR_INIT;
@@ -22,15 +23,17 @@ void potentiometer_monitor_tasks(void) {
       break;
 
     case POTENTIOMETER_MONITOR_WAIT:
-      if (heater_control_monitor.now_ms - pot_monitor.last_change_time_ms >= pot_monitor.read_every_ms) {
+      if (display_monitor.now_ms - pot_monitor.last_change_time_ms >= pot_monitor.read_every_ms) {
         pot_monitor.state = POTENTIOMETER_MONITOR_READ;
       }
       break;
 
     case POTENTIOMETER_MONITOR_READ:
       read_potentiometer();
-      if(pot_monitor.current_celsius < TURN_OFF_TEMPERATURE_CELSIUS){
-        heater_control_monitor.relay_on = false;
+      mcu_monitor.machine_on = pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS;
+      if(!mcu_monitor.machine_on){
+        heater_control_monitor.pid_duty_cycle = 0.0;
+        heater_control_monitor.pid_duty_cycle_int = 0;
         display_monitor.heater_off_color_scheme = true;
       } 
       if(pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS){

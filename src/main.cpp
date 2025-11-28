@@ -10,6 +10,7 @@
 #endif
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
+mcuMonitorData mcu_monitor;
 potentiometerMonitorData pot_monitor; 
 thermocoupleMonitorData tc_monitor;
 displayMonitorData display_monitor;
@@ -36,10 +37,10 @@ void loop(void){
     Serial.print(tc_monitor.wand_celsius);
     Serial.print(" C, Pot Temp: ");
     Serial.print(pot_monitor.current_celsius);
-    Serial.print(" C, PID Output ms: ");
-    Serial.print(heater_control_monitor.pid_output_ms);
-    Serial.print(" ms, Relay On: ");
-    Serial.print(heater_control_monitor.relay_on ? "Yes" : "No");
+    Serial.print(" C, PID Output: ");
+    Serial.print(round(100 * heater_control_monitor.pid_duty_cycle_int / ((1 << mcu_monitor.pid_resolution)-1)));
+    Serial.print(" %, Relay On: ");
+    Serial.print(heater_control_monitor.pid_duty_cycle_int>0 ? "Yes" : "No");
     Serial.print(", TC connected: ");
     Serial.println(tc_monitor.connect_flag ? "Yes" : "No");
   #endif

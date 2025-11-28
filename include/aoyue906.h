@@ -6,11 +6,8 @@
 
 #include "user_hardware.h"
 
-#define VERSION_STRING "0.0.1"
+#define VERSION_STRING "0.1.0"
 
-
-
-//#include <cmath>
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
@@ -19,11 +16,9 @@
 
 #ifdef TC_MAX31855
   #include <Adafruit_MAX31855.h>
-  #define THERMOCOUPLE_DELAY_MS 100
 #endif
 #ifdef TC_MAX6675
   #include <MAX6675.h>
-  #define THERMOCOUPLE_DELAY_MS 250
 #endif
 
 
@@ -39,6 +34,13 @@
 /*****************************************************************************/
 /* MCU WROOM32 SETUP                                                       */
 /*****************************************************************************/
+ 
+typedef struct {
+  volatile bool machine_on;
+  volatile long int now_ms;
+  float pid_frequency_Hz;
+  int pid_resolution;
+} mcuMonitorData;
 
 void MCU_initialize(void);
 void MCU_tasks(void);
@@ -89,15 +91,15 @@ typedef struct {
     Adafruit_MAX31855 * thermocouple; 
   #endif
   volatile thermocouple_monitor_states state;
+  tipProfile tip;
   float wand_celsius;
   float ambient_celsius; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
+  thermocouple_error error;
   bool error_flag;
   bool connect_flag; 
   bool new_measurement_flag;
-  thermocouple_error error;
-  tipProfile tip;
 } thermocoupleMonitorData;
 
 void thermocouple_monitor_initialize(void);
@@ -133,8 +135,8 @@ typedef struct {
   float current_celsius; 
   float previous_celsius;
   unsigned long last_change_time_ms;
-  bool changed_flag;
   unsigned long read_every_ms;
+  bool changed_flag;
 } potentiometerMonitorData;
 
 void potentiometer_monitor_initialize(void);
@@ -164,6 +166,7 @@ typedef struct {
   bool heater_off_color_scheme;
   unsigned int text_color;
   unsigned int bar_color;
+  unsigned long now_ms;
   unsigned int display_counter;
   unsigned long last_display_counter_update_time_ms;
   unsigned long update_display_counter_every_ms;
@@ -206,29 +209,21 @@ typedef struct {
 
 
 typedef struct {
-  volatile heater_control_monitor_states state;
-  Tunings aggressive_tune;
-  Tunings conservative_tune;
-  float gap_to_switch_to_aggressive_tune;
-  float gap;
-  byte debounce_time_ms;
-  
-  unsigned long pid_output_window_size_ms;
-  float pid_max_output_ms;
-  float pid_output_ms;
-  unsigned long pid_window_start_time_ms;
-
-  unsigned long next_relay_switch_time_ms;
-  unsigned long now_ms;
-  
-  bool relay_on; 
-  //bool can_compute_flag;
-
+    volatile heater_control_monitor_states state;
+    Tunings aggressive_tune;
+    Tunings conservative_tune;
+    float gap_to_switch_to_aggressive_tune;
+    float gap;
+    float pid_duty_cycle;
+    int pid_duty_cycle_int;
+    unsigned long pid_sample_window_ms;
+    unsigned int dead_time_us;   // put smallest items at the very end
 } heaterControlMonitorData;
+
 
 void heater_control_initialize(void);
 void heater_control_tasks(void);
 void pid_compute(void);
-unsigned long get_pid_max_output(const tipProfile&profile, unsigned long range_max, float supply_power, float supply_voltage);
+//unsigned long get_pid_max_output(const tipProfile&profile, unsigned long range_max, float supply_power, float supply_voltage);
 
 #endif

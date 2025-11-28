@@ -21,7 +21,9 @@
 extern heaterControlMonitorData heater_control_monitor;
 extern thermocoupleMonitorData tc_monitor;
 extern potentiometerMonitorData pot_monitor;
-QuickPID myPID(&tc_monitor.wand_celsius, &heater_control_monitor.pid_output_ms, &pot_monitor.current_celsius, heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd,
+extern mcuMonitorData mcu_monitor;
+
+QuickPID myPID(&tc_monitor.wand_celsius, &heater_control_monitor.pid_duty_cycle, &pot_monitor.current_celsius, heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd,
                myPID.pMode::pOnError,
                myPID.dMode::dOnMeas,
                myPID.iAwMode::iAwClamp,
@@ -41,28 +43,24 @@ void heater_control_initialize(void){
   heater_control_monitor.gap_to_switch_to_aggressive_tune = 150.0;
   heater_control_monitor.gap = 0.0;
 
-  heater_control_monitor.debounce_time_ms = 0;
-  
-  heater_control_monitor.pid_output_window_size_ms = PID_WINDOW_SIZE_MS + THERMOCOUPLE_CONVERSION_DELAY_MS;
-  heater_control_monitor.pid_max_output_ms = get_pid_max_output(tc_monitor.tip, heater_control_monitor.pid_output_window_size_ms - THERMOCOUPLE_CONVERSION_DELAY_MS, SUPPLY_POWER_WATTS, SUPPLY_VOLTAGE_VOLTS);
-  heater_control_monitor.pid_output_ms = 0;
+  heater_control_monitor.dead_time_us = 500; // microseconds
 
-  heater_control_monitor.pid_window_start_time_ms = 0;
-  heater_control_monitor.now_ms = 0;
-  heater_control_monitor.next_relay_switch_time_ms = 0;
+  // heater_control_monitor.pid_resolution = 8; // 8-bit resolution for analogWrite
+  // heater_control_monitor.pid_frequency_Hz = 100; // PWM frequency in Hz
+  heater_control_monitor.pid_duty_cycle = 0.0;
+  heater_control_monitor.pid_duty_cycle_int = 0;
   
-  heater_control_monitor.relay_on = false;
-  //heater_control_monitor.can_compute_flag = false;
+  //heater_control_monitor.relay_on = false;
 
-  myPID.SetOutputLimits(0, heater_control_monitor.pid_max_output_ms);
-  myPID.SetSampleTimeUs(heater_control_monitor.pid_output_window_size_ms * 1000);
+  myPID.SetOutputLimits(0, (float) ((1<<mcu_monitor.pid_resolution)-1));
+  myPID.SetSampleTimeUs(heater_control_monitor.pid_sample_window_ms * 1000);
   myPID.SetMode(myPID.Control::automatic);
 }
 
 
 
 void heater_control_tasks(void){
-  heater_control_monitor.now_ms = millis();
+  //heater_control_monitor.now_ms = millis();
   switch(heater_control_monitor.state){
 
     case HEATER_CONTROL_MONITOR_INIT:
@@ -70,10 +68,14 @@ void heater_control_tasks(void){
       break;
     
     case HEATER_CONTROL_MONITOR_WAIT:
-      if(!tc_monitor.error_flag && pot_monitor.current_celsius >= TURN_ON_TEMPERATURE_CELSIUS){ 
+      if(!tc_monitor.error_flag 
+        && tc_monitor.new_measurement_flag
+        && mcu_monitor.machine_on){ 
         heater_control_monitor.state = HEATER_CONTROL_MONITOR_COMPUTE;
-      } else {
-        heater_control_monitor.relay_on = false;
+      } 
+      if (tc_monitor.connect_flag || tc_monitor.error_flag || !mcu_monitor.machine_on) {
+        heater_control_monitor.pid_duty_cycle = 0.0;
+        heater_control_monitor.pid_duty_cycle_int = 0;
       }
       break;
     
@@ -82,6 +84,7 @@ void heater_control_tasks(void){
         Serial.println("heater control compute:");
       #endif
       pid_compute();
+      tc_monitor.new_measurement_flag = false;
       heater_control_monitor.state = HEATER_CONTROL_MONITOR_WAIT;
       break;
     
@@ -94,33 +97,26 @@ void heater_control_tasks(void){
 
 void pid_compute(void){
   heater_control_monitor.gap = abs(pot_monitor.current_celsius - tc_monitor.wand_celsius); //distance away from setpoint
-
   if (heater_control_monitor.gap < heater_control_monitor.gap_to_switch_to_aggressive_tune) {  
     myPID.SetTunings(heater_control_monitor.aggressive_tune.Kp, heater_control_monitor.aggressive_tune.Ki, heater_control_monitor.aggressive_tune.Kd);
   } else {
     myPID.SetTunings(heater_control_monitor.conservative_tune.Kp, heater_control_monitor.conservative_tune.Ki, heater_control_monitor.conservative_tune.Kd);
   }
-  //if(tc_monitor.new_measurement_flag) {
-    if (myPID.Compute()) {
-      heater_control_monitor.pid_window_start_time_ms = heater_control_monitor.now_ms;
-    }
-    //tc_monitor.new_measurement_flag = false;
-  //}
-  if (heater_control_monitor.now_ms > heater_control_monitor.next_relay_switch_time_ms) {
-      heater_control_monitor.next_relay_switch_time_ms = heater_control_monitor.now_ms + heater_control_monitor.debounce_time_ms;
-  }
-  if (!heater_control_monitor.relay_on && 
-      heater_control_monitor.pid_output_ms > (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
-      heater_control_monitor.relay_on = true;
-  } else if (heater_control_monitor.relay_on && 
-             heater_control_monitor.pid_output_ms <= (heater_control_monitor.now_ms - heater_control_monitor.pid_window_start_time_ms)) {
-      heater_control_monitor.relay_on = false;
+  if (myPID.Compute()) {
+      heater_control_monitor.pid_duty_cycle_int = (int) heater_control_monitor.pid_duty_cycle;
+  } else {
+      #ifdef ENABLE_SERIAL
+        Serial.println("PID compute failed");
+      #endif
+      heater_control_monitor.pid_duty_cycle = 0.0;
+      heater_control_monitor.pid_duty_cycle_int = 0;
   }
 }
 
 
-unsigned long get_pid_max_output(const tipProfile& profile, unsigned long range_max, float supply_power, float supply_voltage) {
-  unsigned long max_output = (unsigned long) sqrt(profile.resistance * supply_power) *((float) range_max)/ supply_voltage;
-  max_output = max_output > range_max ? range_max : max_output;
-  return max_output;
-}
+// unsigned long get_pid_max_output(const tipProfile& profile, unsigned long range_max, float supply_power, float supply_voltage) {
+//   unsigned long max_output = (unsigned long) sqrt(profile.resistance * supply_power) *((float) range_max)/ supply_voltage;
+//   max_output = max_output > range_max ? range_max : max_output;
+//   return max_output;
+// }
+
