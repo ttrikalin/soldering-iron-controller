@@ -85,20 +85,34 @@ void display_monitor_tasks(void){
         switch(display_monitor.display_counter) {
           case 0: 
           case 2:
-            display_monitor.state = DISPLAY_MONITOR_OFF_MESSAGE;
+            #ifdef CALIBRATE_THERMOCOUPLE
+              display_monitor.state = DISPLAY_MONITOR_CALIBRATION_SCREEN;
+            #else
+              display_monitor.state = DISPLAY_MONITOR_OFF_MESSAGE;
+            #endif
             break;
           case 1:
           case 3:
-            display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
+            #ifdef CALIBRATE_THERMOCOUPLE
+              display_monitor.state = DISPLAY_MONITOR_CALIBRATION_SCREEN;
+            #else
+              display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
+            #endif
             break;
         }
         break;
       }
-      display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
+      #ifdef CALIBRATE_THERMOCOUPLE
+        display_monitor.state = DISPLAY_MONITOR_CALIBRATION_SCREEN;
+      #else
+        display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
+      #endif
+      //display_monitor.state = DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE;
       break;
     case DISPLAY_MONITOR_POTENTIOMETER_TEMPERATURE:
       display_monitor.state = DISPLAY_MONITOR_WAIT;
       display_potentiometer_temperature();
+      delay(100);
       break;
     case DISPLAY_MONITOR_THERMOCOUPLE_TEMPERATURE:
       display_monitor.state = DISPLAY_MONITOR_WAIT;
@@ -127,6 +141,10 @@ void display_monitor_tasks(void){
     case DISPLAY_MONITOR_OFF_MESSAGE:
       display_monitor.state = DISPLAY_MONITOR_WAIT;
       display_off_message();
+      break;
+    case DISPLAY_MONITOR_CALIBRATION_SCREEN:
+      display_monitor.state = DISPLAY_MONITOR_WAIT;
+      display_calibration_screen();
       break;
     default:
       display_monitor.state = DISPLAY_MONITOR_INIT;
@@ -296,17 +314,33 @@ void show_power_bar(){
   #endif
 }
 
-void display_potentiometer_temperature(){
-    show_temperature(false);
-    show_power_bar();
-    display.invertDisplay(display_monitor.heater_off_color_scheme);
-    display.display();
+void display_potentiometer_temperature(void){
+  show_temperature(false);
+  show_power_bar();
+  display.invertDisplay(display_monitor.heater_off_color_scheme);
+  display.display();
 }
 
-void display_thermocouple_temperature(){
-    show_temperature(true);
-    show_power_bar();
-    display.invertDisplay(display_monitor.heater_off_color_scheme);
-    display.display();
+void display_thermocouple_temperature(void){
+  show_temperature(true);
+  show_power_bar();
+  display.invertDisplay(display_monitor.heater_off_color_scheme);
+  display.display();
 } 
 
+void display_calibration_screen(void){
+  display.clearDisplay();
+  display.setTextColor(display_monitor.text_color); 
+  display.setTextSize(1);
+  display.setCursor(0,0);
+  display.println("Calibration Mode");
+  display.setTextSize(2);
+  display.setCursor(0, 20);
+  display.print("Raw:");
+  display.println(tc_monitor.raw_reading);
+  display.print("Cal:");
+  display.println(tc_monitor.wand_celsius);
+  show_power_bar();
+  display.invertDisplay(display_monitor.heater_off_color_scheme);
+  display.display();
+}

@@ -3,10 +3,11 @@
 
 // comment the following to disable Serial monitor 
 #define ENABLE_SERIAL
+//#define CALIBRATE_THERMOCOUPLE
 
 #include "user_hardware.h"
 
-#define VERSION_STRING "0.1.0"
+#define VERSION_STRING "0.2.0"
 
 #include <SPI.h>
 #include <Wire.h>
@@ -93,7 +94,8 @@ typedef struct {
   volatile thermocouple_monitor_states state;
   tipProfile tip;
   float wand_celsius;
-  float ambient_celsius; 
+  float ambient_celsius;
+  float raw_reading; 
   unsigned long last_read_ms;
   unsigned long read_every_ms;
   thermocouple_error error;
@@ -107,6 +109,8 @@ void thermocouple_monitor_tasks(void);
 void read_thermocouple();
 
 float get_calibrated_measurement(float temperature_measurement);
+float get_calibrated_measurement_quadratic(float temperature_measurement);
+float get_calibrated_measurement_cubic(float temperature_measurement);
 
 float voltage_from_temperature(float gain, float temperature, float ambient_temperature);
 float temperature_from_voltage(float gain, float voltage, float ambient_temperature);
@@ -157,7 +161,8 @@ typedef enum {
   DISPLAY_MONITOR_POWER_OFF_MESSAGE = 5,
   DISPLAY_MONITOR_NO_WAND_MESSAGE = 6,
   DISPLAY_MONITOR_THERMOCOUPLE_ERROR_INFO = 7,
-  DISPLAY_MONITOR_NO_WAND_ERROR_INFO = 8
+  DISPLAY_MONITOR_NO_WAND_ERROR_INFO = 8, 
+  DISPLAY_MONITOR_CALIBRATION_SCREEN = 9
 } display_monitor_states;
 
 
@@ -187,6 +192,7 @@ void display_no_wand_error_info(void);
 void show_temperature(bool show_tc_temp);
 void display_potentiometer_temperature(void);
 void display_thermocouple_temperature(void);
+void display_calibration_screen(void);
 
 
 

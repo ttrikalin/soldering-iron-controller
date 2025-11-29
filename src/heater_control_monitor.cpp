@@ -32,12 +32,12 @@ QuickPID myPID(&tc_monitor.wand_celsius, &heater_control_monitor.pid_duty_cycle,
 void heater_control_initialize(void){
   heater_control_monitor.state = HEATER_CONTROL_MONITOR_INIT;
 
-  heater_control_monitor.aggressive_tune.Kp = 2.750;
-  heater_control_monitor.aggressive_tune.Ki = 0.08;
+  heater_control_monitor.aggressive_tune.Kp = 8.0;
+  heater_control_monitor.aggressive_tune.Ki = 0.8;
   heater_control_monitor.aggressive_tune.Kd = 0.00;
 
-  heater_control_monitor.conservative_tune.Kp = 2.750;
-  heater_control_monitor.conservative_tune.Ki = 0.08;  
+  heater_control_monitor.conservative_tune.Kp = 8.0;
+  heater_control_monitor.conservative_tune.Ki = 0.8;  
   heater_control_monitor.conservative_tune.Kd = 0.00;
 
   heater_control_monitor.gap_to_switch_to_aggressive_tune = 150.0;
@@ -45,13 +45,9 @@ void heater_control_initialize(void){
 
   heater_control_monitor.dead_time_us = 500; // microseconds
 
-  // heater_control_monitor.pid_resolution = 8; // 8-bit resolution for analogWrite
-  // heater_control_monitor.pid_frequency_Hz = 100; // PWM frequency in Hz
   heater_control_monitor.pid_duty_cycle = 0.0;
   heater_control_monitor.pid_duty_cycle_int = 0;
   
-  //heater_control_monitor.relay_on = false;
-
   myPID.SetOutputLimits(0, (float) ((1<<mcu_monitor.pid_resolution)-1));
   myPID.SetSampleTimeUs(heater_control_monitor.pid_sample_window_ms * 1000);
   myPID.SetMode(myPID.Control::automatic);
@@ -114,9 +110,4 @@ void pid_compute(void){
 }
 
 
-// unsigned long get_pid_max_output(const tipProfile& profile, unsigned long range_max, float supply_power, float supply_voltage) {
-//   unsigned long max_output = (unsigned long) sqrt(profile.resistance * supply_power) *((float) range_max)/ supply_voltage;
-//   max_output = max_output > range_max ? range_max : max_output;
-//   return max_output;
-// }
 

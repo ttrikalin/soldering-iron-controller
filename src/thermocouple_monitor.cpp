@@ -16,6 +16,7 @@ void thermocouple_monitor_initialize(void) {
   tc_monitor.state = THERMOCOUPLE_MONITOR_INIT;
   tc_monitor.wand_celsius = 0.0;
   tc_monitor.ambient_celsius = 0.0;
+  tc_monitor.raw_reading = 0.0;
   tc_monitor.last_read_ms = 0;
   tc_monitor.read_every_ms = 500;
   tc_monitor.error_flag = false;
@@ -62,7 +63,8 @@ void read_thermocouple(){
   tc_monitor.connect_flag = true;
   digitalWrite(THERMOCOUPLE_CONNECT, HIGH);
   delay(THERMOCOUPLE_CONVERSION_DELAY_MS);
-  tc_monitor.wand_celsius = get_calibrated_measurement(tc_monitor.thermocouple->readCelsius());
+  tc_monitor.raw_reading = tc_monitor.thermocouple->readCelsius();
+  tc_monitor.wand_celsius = get_calibrated_measurement(tc_monitor.raw_reading);
   if (isnan(tc_monitor.wand_celsius) || tc_monitor.wand_celsius == 0.0) {
     tc_monitor.error_flag = true;
     #ifdef TC_MAX31855
@@ -138,46 +140,17 @@ float convert_temperature_reading(const tipProfile &tip, float temperature_readi
 
 
 
-//    actual T12_on_K_TC
-// 1    20.0           7
-// 2    34.0          14
-// 3    39.0          14
-// 4    40.0          15
-// 5    46.5          15
-// 6    49.5          16
-// 7    52.0          17
-// 8    55.0          18
-// 9    61.0          20
-// 10   64.5          21
-// 11   67.0          22
-// 12   70.0          23
-// 13   74.0          24
-// 14   78.0          25
-// 15   84.0          28
-// 16   38.0          13
-// 17  238.0         102
-
-// > lm(data = dat, actual ~ T12_on_K_TC) |> summary()
-
-// Call:
-// lm(formula = actual ~ T12_on_K_TC, data = dat)
-
-// Residuals:
-//      Min       1Q   Median       3Q      Max 
-// -10.6068  -5.2751   0.6204   4.3325   8.5597 
-
-// Coefficients:
-//             Estimate Std. Error t value Pr(>|t|)    
-// (Intercept) 13.00045    2.26109    5.75 3.84e-05 ***
-// T12_on_K_TC  2.25759    0.07331   30.80 5.65e-15 ***
-// ---
-// Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
-
-// Residual standard error: 6.151 on 15 degrees of freedom
-// Multiple R-squared:  0.9844,	Adjusted R-squared:  0.9834 
-// F-statistic: 948.4 on 1 and 15 DF,  p-value: 5.649e-15
-
 
 float get_calibrated_measurement(float temperature_reading){
-  return 13 + 2.25759  * temperature_reading;
+ return get_calibrated_measurement_cubic( temperature_reading);
+}
+
+float get_calibrated_measurement_quadratic( float temperature_reading){
+  return 
+  11.229128342 + 2.371390177 * temperature_reading - 0.002833668 *  temperature_reading * temperature_reading;
+}
+float get_calibrated_measurement_cubic( float temperature_reading){
+  return  15.21739 +  2.078516 * temperature_reading +  
+          1.495710e-04 * temperature_reading * temperature_reading  
+          -7.694609e-06 * temperature_reading * temperature_reading * temperature_reading; 
 }
